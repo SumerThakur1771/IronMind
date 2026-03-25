@@ -2,15 +2,30 @@
 
 import { useState } from "react";
 
+interface KnowledgeEntry {
+  id: number;
+  title: string;
+  category: string;
+  content: string;
+}
+
 export default function AdminPage() {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("");
   const [content, setContent] = useState("");
+  const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
 
   function handleSubmit() {
     console.log(title);
     console.log(category);
     console.log(content);
+    const newEntry = {
+      id: entries.length + 1,
+      title: title,
+      category: category,
+      content: content,
+    };
+    setEntries([...entries, newEntry]);
     setTitle("");
     setCategory("");
     setContent("");
@@ -47,6 +62,18 @@ export default function AdminPage() {
         <button onClick={handleSubmit} className="bg-blue-500 p-1.5 rounded-md">
           Submit
         </button>
+        <div>
+          {entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="mt-4 rounded border border-gray-700 p-4 text-left"
+            >
+              <h2 className="text-lg font-bold">{entry.title}</h2>
+              <p className="text-sm text-blue-400">{entry.category}</p>
+              <p className="mt-2 text-gray-300">{entry.content}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
