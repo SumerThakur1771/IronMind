@@ -16,9 +16,12 @@ export default function AdminPage() {
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
 
   function handleSubmit() {
-    console.log(title);
-    console.log(category);
-    console.log(content);
+
+    if(!title || !category || !content){
+      alert("Please fill in all fields");
+      return;
+    }
+    
     const newEntry = {
       id: entries.length + 1,
       title: title,
@@ -29,6 +32,10 @@ export default function AdminPage() {
     setTitle("");
     setCategory("");
     setContent("");
+  }
+
+  function handleDelete(id: number){
+    setEntries(entries.filter((entry)=> entry.id !== id));
   }
 
   return (
@@ -71,6 +78,7 @@ export default function AdminPage() {
               <h2 className="text-lg font-bold">{entry.title}</h2>
               <p className="text-sm text-blue-400">{entry.category}</p>
               <p className="mt-2 text-gray-300">{entry.content}</p>
+              <button className="bg-red-500 px-2.5 rounded-md m-2" onClick={()=>handleDelete(entry.id)}>Delete</button>
             </div>
           ))}
         </div>
