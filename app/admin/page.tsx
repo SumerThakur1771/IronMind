@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import KnowledgeForm from "../components/KnowledgeForm";
+import KnowledgeCard from "../components/KnowledgeCard";
 
 interface KnowledgeEntry {
   id: number;
@@ -53,20 +54,11 @@ export default function AdminPage() {
         />
         <div>
           {entries.map((entry) => (
-            <div
+            <KnowledgeCard
+              entry={entry}
+              handleDelete={handleDelete}
               key={entry.id}
-              className="mt-4 rounded border border-gray-700 p-4 text-left"
-            >
-              <h2 className="text-lg font-bold">{entry.title}</h2>
-              <p className="text-sm text-blue-400">{entry.category}</p>
-              <p className="mt-2 text-gray-300">{entry.content}</p>
-              <button
-                className="bg-red-500 px-2.5 rounded-md m-2"
-                onClick={() => handleDelete(entry.id)}
-              >
-                Delete
-              </button>
-            </div>
+            />
           ))}
         </div>
       </div>
