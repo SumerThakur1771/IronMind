@@ -23,13 +23,18 @@ export default function AdminPage() {
       return;
     }
 
-    const newEntry = {
-      id: entries.length + 1,
-      title: title,
-      category: category,
-      content: content,
-    };
-    setEntries([...entries, newEntry]);
+    // const newEntry = {
+    //   id: entries.length + 1,
+    //   title: title,
+    //   category: category,
+    //   content: content,
+    // };
+    // setEntries([...entries, newEntry]);
+    fetch("/api/knowledge",{
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({title, category, content})
+    })
     setTitle("");
     setCategory("");
     setContent("");
