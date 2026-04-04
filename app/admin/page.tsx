@@ -26,7 +26,7 @@ export default function AdminPage() {
     loadEntries();
   }, []);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!title || !category || !content) {
       alert("Please fill in all fields");
       return;
@@ -39,11 +39,13 @@ export default function AdminPage() {
     //   content: content,
     // };
     // setEntries([...entries, newEntry]);
-    fetch("/api/knowledge", {
+    const request = await fetch("/api/knowledge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, category, content }),
     });
+    const newEntry = await request.json();
+    setEntries([...entries, newEntry]);
     setTitle("");
     setCategory("");
     setContent("");
