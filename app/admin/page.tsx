@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import KnowledgeForm from "../components/KnowledgeForm";
 import KnowledgeCard from "../components/KnowledgeCard";
 
@@ -17,6 +17,15 @@ export default function AdminPage() {
   const [content, setContent] = useState("");
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
 
+  useEffect(() => {
+    async function loadEntries() {
+      const response = await fetch("/api/knowledge");
+      const data = await response.json();
+      setEntries(data);
+    }
+    loadEntries();
+  }, []);
+
   function handleSubmit() {
     if (!title || !category || !content) {
       alert("Please fill in all fields");
@@ -30,11 +39,11 @@ export default function AdminPage() {
     //   content: content,
     // };
     // setEntries([...entries, newEntry]);
-    fetch("/api/knowledge",{
+    fetch("/api/knowledge", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title, category, content})
-    })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, category, content }),
+    });
     setTitle("");
     setCategory("");
     setContent("");
