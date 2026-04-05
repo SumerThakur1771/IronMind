@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import KnowledgeForm from "../components/KnowledgeForm";
 import KnowledgeCard from "../components/KnowledgeCard";
 
@@ -17,7 +17,16 @@ export default function AdminPage() {
   const [content, setContent] = useState("");
   const [entries, setEntries] = useState<KnowledgeEntry[]>([]);
 
-  function handleSubmit() {
+  useEffect(() => {
+    async function loadEntries() {
+      const response = await fetch("/api/knowledge");
+      const data = await response.json();
+      setEntries(data);
+    }
+    loadEntries();
+  }, []);
+
+  async function handleSubmit() {
     if (!title || !category || !content) {
       alert("Please fill in all fields");
       return;
@@ -30,17 +39,20 @@ export default function AdminPage() {
     //   content: content,
     // };
     // setEntries([...entries, newEntry]);
-    fetch("/api/knowledge",{
+    const request = await fetch("/api/knowledge", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({title, category, content})
-    })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, category, content }),
+    });
+    const newEntry = await request.json();
+    setEntries([...entries, newEntry]);
     setTitle("");
     setCategory("");
     setContent("");
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
+    await fetch(`/api/knowledge/${id}`, {method: "DELETE"});
     setEntries(entries.filter((entry) => entry.id !== id));
   }
 
