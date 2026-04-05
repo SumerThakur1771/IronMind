@@ -51,7 +51,8 @@ export default function AdminPage() {
     setContent("");
   }
 
-  function handleDelete(id: number) {
+  async function handleDelete(id: number) {
+    await fetch(`/api/knowledge/${id}`, {method: "DELETE"});
     setEntries(entries.filter((entry) => entry.id !== id));
   }
 
