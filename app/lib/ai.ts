@@ -7,15 +7,16 @@ function apiKey(): string {
 }
 
 export async function generateEmbedding(text: string): Promise<number[]> {
-  const res = await fetch(`${GEMINI_BASE}/text-embedding-004:embedContent`, {
+  const res = await fetch(`${GEMINI_BASE}/gemini-embedding-001:embedContent`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey(),
     },
     body: JSON.stringify({
-      model: "models/text-embedding-004",
+      model: "models/gemini-embedding-001",
       content: { parts: [{ text }] },
+      outputDimensionality: 768,
     }),
   });
 
