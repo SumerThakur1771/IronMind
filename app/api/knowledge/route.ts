@@ -1,4 +1,5 @@
 import prisma from "@/app/lib/prisma";
+import { generateEmbedding } from "@/app/lib/ai";
 import { NextResponse, NextRequest } from "next/server";
 
 export async function GET() {
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
       content: body.content,
     },
   });
+
+  const embedding = await generateEmbedding(entry.content);
+  const vector = `[${embedding.join(",")}]`;
+  await prisma.$executeRaw`INSERT INTO embeddings (knowledge_id, chunk_text, embedding) VALUES (${entry.id}, ${entry.content}, ${vector}::vector)`;
 
   return NextResponse.json(entry);
 }

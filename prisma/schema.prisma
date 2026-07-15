@@ -13,6 +13,7 @@ model Knowledge {
   category  String
   content   String
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  embeddings Embedding[]
 
   @@map("knowledge")
 }
@@ -25,4 +26,16 @@ model User {
   createdAt DateTime? @default(now()) @map("created_at")
 
   @@map("users")
+}
+
+model Embedding {
+  id          Int      @id @default(autoincrement())
+  knowledgeId Int      @map("knowledge_id")
+  chunkText   String   @map("chunk_text")
+  embedding   Unsupported("vector(768)")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  @@map("embeddings")
 }
