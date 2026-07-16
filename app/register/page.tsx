@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +16,7 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const request = await fetch("/api/auth/login", {
+      const request = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -26,8 +26,7 @@ export default function LoginPage() {
         setError(data.error);
         return;
       }
-      document.cookie = `token=${data}; path=/`;
-      window.location.href = "/admin";
+      window.location.href = "/login";
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -37,7 +36,6 @@ export default function LoginPage() {
 
   return (
     <main className="bg-app grain relative flex min-h-screen items-center justify-center overflow-hidden px-6">
-      {/* depth layers */}
       <div className="bg-mesh pointer-events-none absolute inset-0" />
       <div
         className="pointer-events-none absolute left-1/2 top-1/2 h-[30rem] w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]"
@@ -57,16 +55,11 @@ export default function LoginPage() {
           <Link href="/" className="text-2xl font-bold tracking-tight">
             <span className="text-gradient">IronMind</span>
           </Link>
-          <motion.h1
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="mt-6 text-2xl font-bold text-white"
-          >
-            Welcome back
-          </motion.h1>
+          <h1 className="mt-6 text-2xl font-bold text-white">
+            Create your account
+          </h1>
           <p className="mt-2 text-sm font-light text-gray-400">
-            Sign in to manage your knowledge base.
+            Start building your knowledge base.
           </p>
         </div>
 
@@ -95,7 +88,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="input-styled"
-              autoComplete="current-password"
+              autoComplete="new-password"
             />
           </div>
 
@@ -117,21 +110,21 @@ export default function LoginPage() {
             {loading ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                Signing in…
+                Creating account…
               </>
             ) : (
-              "Sign in"
+              "Sign up"
             )}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm font-light text-gray-500">
-          Don&apos;t have an account?{" "}
+          Already have an account?{" "}
           <Link
-            href="/register"
+            href="/login"
             className="font-medium text-blue-400 transition-colors hover:text-blue-300"
           >
-            Sign up
+            Sign in
           </Link>
         </p>
       </motion.div>

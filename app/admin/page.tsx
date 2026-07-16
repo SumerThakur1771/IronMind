@@ -32,13 +32,6 @@ export default function AdminPage() {
       return;
     }
 
-    // const newEntry = {
-    //   id: entries.length + 1,
-    //   title: title,
-    //   category: category,
-    //   content: content,
-    // };
-    // setEntries([...entries, newEntry]);
     const request = await fetch("/api/knowledge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -52,24 +45,42 @@ export default function AdminPage() {
   }
 
   async function handleDelete(id: number) {
-    await fetch(`/api/knowledge/${id}`, {method: "DELETE"});
+    await fetch(`/api/knowledge/${id}`, { method: "DELETE" });
     setEntries(entries.filter((entry) => entry.id !== id));
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center flex flex-col gap-8 w-md">
-        <h1 className="text-3xl font-bold"> {title}</h1>
-        <KnowledgeForm
-          title={title}
-          setTitle={setTitle}
-          category={category}
-          setCategory={setCategory}
-          content={content}
-          setContent={setContent}
-          handleSubmit={handleSubmit}
-        />
-        <div>
+    <main className="bg-app grain relative min-h-screen px-6 py-16 text-white">
+      <div className="bg-mesh pointer-events-none absolute inset-0" />
+
+      <div className="relative z-10 mx-auto max-w-2xl">
+        <h1 className="text-center text-4xl font-black tracking-tight">
+          <span className="text-gradient">Knowledge Base</span>
+        </h1>
+        <p className="mt-3 text-center font-light text-gray-400">
+          Add and manage the principles IronMind answers from.
+        </p>
+
+        {/* form */}
+        <div className="glass-card mt-10 p-6 sm:p-8">
+          <KnowledgeForm
+            title={title}
+            setTitle={setTitle}
+            category={category}
+            setCategory={setCategory}
+            content={content}
+            setContent={setContent}
+            handleSubmit={handleSubmit}
+          />
+        </div>
+
+        {/* entries */}
+        <div className="mt-10 flex flex-col gap-4">
+          {entries.length === 0 && (
+            <p className="text-center text-sm font-light text-gray-500">
+              No entries yet. Add your first principle above.
+            </p>
+          )}
           {entries.map((entry) => (
             <KnowledgeCard
               entry={entry}
@@ -79,6 +90,6 @@ export default function AdminPage() {
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }
