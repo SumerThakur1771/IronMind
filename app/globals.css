@@ -254,12 +254,26 @@ html.lenis body {
   animation: dot-pulse 1.2s ease-in-out infinite;
 }
 
+/* indeterminate sliding gradient bar for the chat loading state */
+@keyframes loading-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(280%);
+  }
+}
+.loading-bar {
+  animation: loading-slide 1.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-gradient-x,
   .animate-border-glow,
   .animate-border-shimmer,
   .glow-border,
-  .thinking-dot {
+  .thinking-dot,
+  .loading-bar {
     animation: none;
   }
 }

@@ -17,16 +17,61 @@ type Message = {
   sources?: Source[];
 };
 
-function ThinkingDots() {
+const LOADING_MESSAGES = [
+  "Scanning the knowledge base...",
+  "Finding the most relevant principles...",
+  "Crafting your answer...",
+  "Cross-referencing training science...",
+  "Consulting 6 years of lifting experience...",
+  "Pulling from evidence-based research...",
+  "Almost there, no bro-science allowed...",
+];
+
+function LoadingIndicator() {
+  const [index, setIndex] = useState(0);
+
+  // rotate the message every 2s; cleanup clears the interval when the
+  // response arrives and this component unmounts
+  useEffect(() => {
+    const id = setInterval(() => {
+      setIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(id);
+  }, []);
+
   return (
-    <div className="glass-card inline-flex items-center gap-1.5 rounded-2xl rounded-bl-sm px-4 py-3">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="thinking-dot h-2 w-2 rounded-full bg-gray-300"
-          style={{ animationDelay: `${i * 0.18}s` }}
-        />
-      ))}
+    <div className="glass-card max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3">
+      <div className="flex items-center gap-2.5">
+        {/* pulsing dots icon */}
+        <span className="flex gap-1">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="thinking-dot h-1.5 w-1.5 rounded-full bg-cyan-300"
+              style={{ animationDelay: `${i * 0.18}s` }}
+            />
+          ))}
+        </span>
+
+        {/* rotating message */}
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={index}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+            className="text-sm text-gray-300"
+          >
+            {LOADING_MESSAGES[index]}
+          </motion.span>
+        </AnimatePresence>
+      </div>
+
+      {/* indeterminate gradient loading bar */}
+      <div className="mt-2.5 h-0.5 w-full overflow-hidden rounded-full bg-white/5">
+        <div className="loading-bar h-full w-2/5 rounded-full bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500" />
+      </div>
     </div>
   );
 }
@@ -173,7 +218,7 @@ export default function ChatPage() {
 
           {loading && (
             <div className="flex justify-start">
-              <ThinkingDots />
+              <LoadingIndicator />
             </div>
           )}
 
