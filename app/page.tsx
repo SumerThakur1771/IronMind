@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   motion,
   useInView,
+  useScroll,
+  useMotionValueEvent,
   AnimatePresence,
   type Variants,
 } from "framer-motion";
@@ -172,12 +174,13 @@ function Hero() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1.5, ease: EASE_OUT }}
-          className="mt-12 flex items-center justify-center"
+          className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row"
         >
+          {/* primary — gradient */}
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/chat"
-              className="animate-border-glow group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-9 py-4 text-base font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+              className="group inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-9 py-4 text-base font-semibold text-white shadow-lg shadow-blue-500/25 transition-shadow hover:shadow-xl hover:shadow-blue-500/40"
             >
               Start Chatting
               <svg
@@ -194,6 +197,16 @@ function Hero() {
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </Link>
+          </motion.div>
+
+          {/* secondary — outlined */}
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
+            <a
+              href="#demo"
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-9 py-4 text-base font-medium text-gray-200 backdrop-blur-sm transition-colors hover:border-white/30 hover:text-white"
+            >
+              See it in action
+            </a>
           </motion.div>
         </motion.div>
       </div>
@@ -237,19 +250,37 @@ const FEATURES: Feature[] = [
     title: "Zero Hallucination",
     description:
       "Answers come only from Sumer's stored principles. If it's not in the knowledge base, IronMind says so instead of inventing advice.",
-    icon: <path d="M12 3 5 6v5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6l-7-3Zm-1 12-3-3 1.4-1.4L11 12.2l3.6-3.6L16 10l-5 5Z" />,
+    icon: (
+      <>
+        <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" />
+        <path d="M9 12l2 2 4-4" />
+      </>
+    ),
   },
   {
     title: "Real Experience (5.5 Years)",
     description:
       "Every principle is drawn from 5.5 years of actual lifting — not scraped blog posts or generic fitness filler.",
-    icon: <path d="M6.5 6.5 4 9l2 2-1 1-2-2-1 1 8 8 1-1-2-2 1-1 2 2 2.5-2.5-2-2 1-1 2 2 1-1-8-8-1 1 2 2-1 1-2-2Z" />,
+    icon: (
+      <>
+        <path d="M2.5 12h2M19.5 12h2" />
+        <rect x="5" y="8" width="3" height="8" rx="1" />
+        <rect x="16" y="8" width="3" height="8" rx="1" />
+        <path d="M8 12h8" />
+      </>
+    ),
   },
   {
     title: "Source Citations",
     description:
       "Each answer shows exactly which principles it drew from, with title and category — so you can trace the reasoning.",
-    icon: <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5ZM8 12h8v1.6H8V12Zm0 3.4h8V17H8v-1.6Z" />,
+    icon: (
+      <>
+        <path d="M13 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V8Z" />
+        <path d="M13 3v5h5" />
+        <path d="M9 13h6M9 16.5h4" />
+      </>
+    ),
   },
 ];
 
@@ -267,11 +298,15 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
       {/* inner card */}
       <div className="relative h-full rounded-3xl bg-gray-900/90 p-9 backdrop-blur-sm">
         <svg
-          width="44"
-          height="44"
+          width="40"
+          height="40"
           viewBox="0 0 24 24"
           className="mb-6"
-          fill="url(#iconGradient)"
+          fill="none"
+          stroke="url(#iconGradient)"
+          strokeWidth={1.6}
+          strokeLinecap="round"
+          strokeLinejoin="round"
         >
           {feature.icon}
         </svg>
@@ -383,6 +418,122 @@ function HowItWorks() {
             </motion.div>
           ))}
         </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Live demo                                                          */
+/* ------------------------------------------------------------------ */
+
+const DEMO_ANSWER =
+  "Protein intake should be 0.8 to 1 gram per pound of bodyweight. Focus on hitting this consistently every day.";
+
+function LiveDemo() {
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-120px" });
+  const words = DEMO_ANSWER.split(" ");
+
+  // reveal the answer word-by-word as the section scrolls through
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start 0.8", "start 0.2"],
+  });
+  const [shown, setShown] = useState(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    setShown(Math.min(words.length, Math.max(0, Math.round(v * words.length))));
+  });
+  const typed = shown >= words.length;
+
+  return (
+    <section id="demo" className="relative px-6 py-52">
+      <div ref={ref} className="mx-auto max-w-4xl">
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <h2 className="text-5xl font-black tracking-tight text-white sm:text-6xl">
+            See it in action
+          </h2>
+          <p className="mt-5 text-lg font-light text-gray-400">
+            Grounded answers, with the sources to back them.
+          </p>
+        </Reveal>
+
+        {/* browser window mockup */}
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 1, ease: EASE_OUT, delay: 0.2 }}
+          className="mt-16 overflow-hidden rounded-xl border border-white/10 bg-white/[0.02] shadow-2xl shadow-black/40 backdrop-blur-sm"
+        >
+          {/* title bar */}
+          <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.03] px-4 py-3">
+            <span className="h-3 w-3 rounded-full bg-red-400/70" />
+            <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
+            <span className="h-3 w-3 rounded-full bg-green-400/70" />
+            <span className="mx-auto rounded-md bg-white/5 px-3 py-1 text-xs text-gray-500">
+              ironmind.ai/chat
+            </span>
+          </div>
+
+          {/* conversation */}
+          <div className="flex flex-col gap-4 px-6 py-8 sm:px-10 sm:py-10">
+            {/* user */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.5 }}
+              className="flex justify-end"
+            >
+              <div className="max-w-[80%] rounded-2xl rounded-br-sm bg-gradient-to-br from-blue-500 to-blue-600 px-4 py-2.5 text-white shadow-lg shadow-blue-500/20">
+                How much protein should I eat?
+              </div>
+            </motion.div>
+
+            {/* assistant — typed on scroll */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={inView ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.5, delay: 0.9 }}
+              className="flex justify-start"
+            >
+              <div className="max-w-[80%]">
+                <div className="glass-card rounded-2xl rounded-bl-sm px-4 py-2.5 leading-relaxed text-gray-100">
+                  {words.map((word, i) => (
+                    <span
+                      key={i}
+                      className="transition-opacity duration-300"
+                      style={{ opacity: i < shown ? 1 : 0.12 }}
+                    >
+                      {word}{" "}
+                    </span>
+                  ))}
+                  {!typed && (
+                    <span className="inline-block h-4 w-[2px] translate-y-0.5 animate-pulse bg-cyan-300" />
+                  )}
+                </div>
+
+                {/* source pill after fully typed */}
+                <AnimatePresence>
+                  {typed && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="mt-2"
+                    >
+                      <span className="glow-border inline-block text-xs">
+                        <span className="bg-app inline-flex items-center gap-1 rounded-[calc(1rem-1px)] px-2.5 py-1 text-gray-300">
+                          Protein Intake
+                          <span className="text-gray-500">· nutrition</span>
+                        </span>
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -542,6 +693,7 @@ export default function Home() {
       <Hero />
       <Features />
       <HowItWorks />
+      <LiveDemo />
       <About />
       <FinalCTA />
       <Footer />

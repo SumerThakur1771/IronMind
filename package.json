@@ -12,6 +12,7 @@
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",
     "@prisma/client": "^7.6.0",
+    "@studio-freight/lenis": "^1.0.42",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.42.2",
     "jsonwebtoken": "^9.0.3",
