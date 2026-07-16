@@ -14,7 +14,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    /* deep navy */
+    --background: #0a0f1e;
     --foreground: #ededed;
   }
 }
@@ -29,7 +30,9 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Animated gradient for the IronMind wordmark */
+/* ------------------------------------------------------------------ */
+/*  Animated gradient wordmark                                         */
+/* ------------------------------------------------------------------ */
 @keyframes gradient-x {
   0%,
   100% {
@@ -41,46 +44,93 @@ html {
 }
 .animate-gradient-x {
   background-size: 200% 200%;
-  animation: gradient-x 6s ease infinite;
+  animation: gradient-x 7s ease infinite;
 }
 
-/* Floating background particles */
-@keyframes float {
+/* ------------------------------------------------------------------ */
+/*  Pulsing border glow for the CTA                                    */
+/* ------------------------------------------------------------------ */
+@keyframes border-glow {
   0%,
   100% {
-    transform: translateY(0);
-    opacity: 0.35;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.5),
+      0 0 18px rgba(59, 130, 246, 0.35), 0 0 36px rgba(6, 182, 212, 0.15);
   }
   50% {
-    transform: translateY(-24px);
-    opacity: 0.9;
+    box-shadow: 0 0 0 1px rgba(139, 92, 246, 0.7),
+      0 0 30px rgba(59, 130, 246, 0.6), 0 0 60px rgba(139, 92, 246, 0.35);
   }
 }
-.animate-float {
-  animation: float var(--float-duration, 6s) ease-in-out infinite;
-  animation-delay: var(--float-delay, 0s);
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
 }
 
-/* Glowing pulse for the primary CTA */
-@keyframes pulse-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 22px rgba(59, 130, 246, 0.45),
-      0 0 44px rgba(34, 211, 238, 0.15);
+/* ------------------------------------------------------------------ */
+/*  Moving gradient along a card border                               */
+/* ------------------------------------------------------------------ */
+@keyframes border-shimmer {
+  0% {
+    background-position: 0% 50%;
   }
-  50% {
-    box-shadow: 0 0 34px rgba(59, 130, 246, 0.75),
-      0 0 68px rgba(168, 85, 247, 0.35);
+  100% {
+    background-position: 200% 50%;
   }
 }
-.animate-pulse-glow {
-  animation: pulse-glow 2.8s ease-in-out infinite;
+.animate-border-shimmer {
+  background-size: 200% 200%;
+  animation: border-shimmer 4s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Depth: subtle grid + gradient mesh + film grain                   */
+/* ------------------------------------------------------------------ */
+
+/* faint line grid */
+.bg-grid {
+  background-image: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* soft multi-color mesh, replaces the particles */
+.bg-mesh {
+  background-image: radial-gradient(
+      40rem 40rem at 20% 10%,
+      rgba(59, 130, 246, 0.18),
+      transparent 60%
+    ),
+    radial-gradient(
+      36rem 36rem at 85% 20%,
+      rgba(139, 92, 246, 0.16),
+      transparent 60%
+    ),
+    radial-gradient(
+      44rem 44rem at 60% 90%,
+      rgba(6, 182, 212, 0.14),
+      transparent 60%
+    );
+}
+
+/* film grain overlay, applied to a fixed full-screen layer */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-gradient-x,
-  .animate-float,
-  .animate-pulse-glow {
+  .animate-border-glow,
+  .animate-border-shimmer {
     animation: none;
   }
 }
