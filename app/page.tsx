@@ -13,35 +13,50 @@ import {
 /*  Shared animation variants                                          */
 /* ------------------------------------------------------------------ */
 
+const EASE_OUT = [0.16, 1, 0.3, 1] as const;
+
 const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 40 },
+  hidden: { opacity: 0, y: 30 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 1, ease: EASE_OUT },
   },
 };
 
 const staggerContainer: Variants = {
   hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.12, delayChildren: 0.1 },
-  },
+  visible: { transition: { staggerChildren: 0.15, delayChildren: 0.1 } },
 };
 
 const wordFade: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+  hidden: { opacity: 0, y: 14 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE_OUT } },
 };
 
-/* Deterministic particle field (computed from index → no hydration drift) */
-const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
-  left: (i * 37) % 100,
-  top: (i * 53) % 100,
-  size: 2 + (i % 4),
-  delay: (i % 6) * 0.7,
-  duration: 5 + (i % 5),
-}));
+/* Reusable scroll-reveal wrapper */
+function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      variants={fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-120px" }}
+      transition={{ duration: 1, ease: EASE_OUT, delay }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  Navigation                                                         */
@@ -65,17 +80,20 @@ function Navbar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="absolute inset-0 border-b border-white/5 bg-gray-950/70 backdrop-blur-lg"
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 border-b border-white/5 bg-[#0a0f1e]/70 backdrop-blur-xl"
           />
         )}
       </AnimatePresence>
 
-      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="text-lg font-bold tracking-tight text-white">
+      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+        <Link
+          href="/"
+          className="text-lg font-bold tracking-tight text-white"
+        >
           Iron<span className="text-blue-500">Mind</span>
         </Link>
-        <div className="flex items-center gap-6 text-sm text-gray-300">
+        <div className="flex items-center gap-7 text-sm font-light text-gray-300">
           <Link href="/chat" className="transition-colors hover:text-white">
             Chat
           </Link>
@@ -99,39 +117,30 @@ function Navbar() {
 /* ------------------------------------------------------------------ */
 
 function Hero() {
-  const subtitle = "Ask any training, nutrition, or recovery question — get answers grounded in real principles, never guesses.";
+  const subtitle =
+    "Ask any training, nutrition, or recovery question — answers grounded in real principles, never guesses.";
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden px-6">
-      {/* ambient glows */}
-      <div className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-blue-600/20 blur-[120px]" />
-      <div className="pointer-events-none absolute bottom-0 right-10 h-[28rem] w-[28rem] rounded-full bg-purple-600/15 blur-[120px]" />
+      {/* grid + mesh depth layers */}
+      <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_75%)]" />
+      <div className="bg-mesh pointer-events-none absolute inset-0" />
 
-      {/* floating particles */}
-      <div className="pointer-events-none absolute inset-0">
-        {PARTICLES.map((p, i) => (
-          <span
-            key={i}
-            className="animate-float absolute rounded-full bg-cyan-300/40"
-            style={{
-              left: `${p.left}%`,
-              top: `${p.top}%`,
-              width: p.size,
-              height: p.size,
-              // custom props consumed by the .animate-float keyframes
-              ["--float-delay" as string]: `${p.delay}s`,
-              ["--float-duration" as string]: `${p.duration}s`,
-            }}
-          />
-        ))}
-      </div>
+      {/* radial spotlight behind the wordmark */}
+      <div
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[42rem] w-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px]"
+        style={{
+          background:
+            "radial-gradient(circle at center, rgba(59,130,246,0.30), rgba(139,92,246,0.16) 45%, transparent 70%)",
+        }}
+      />
 
-      <div className="relative z-10 mx-auto max-w-3xl text-center">
+      <div className="relative z-10 mx-auto max-w-4xl text-center">
         <motion.h1
-          initial={{ opacity: 0, scale: 0.94 }}
+          initial={{ opacity: 0, scale: 0.92 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="animate-gradient-x bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500 bg-clip-text text-6xl font-black tracking-tight text-transparent sm:text-8xl"
+          transition={{ duration: 1.1, ease: EASE_OUT }}
+          className="animate-gradient-x bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500 bg-clip-text text-7xl font-black leading-none tracking-tighter text-transparent sm:text-8xl md:text-[10rem]"
         >
           IronMind
         </motion.h1>
@@ -139,8 +148,8 @@ function Hero() {
         <motion.p
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.4 }}
-          className="mt-6 text-lg font-medium text-gray-200 sm:text-2xl"
+          transition={{ duration: 1, delay: 0.5, ease: EASE_OUT }}
+          className="mt-8 text-xs font-light uppercase tracking-[0.35em] text-cyan-300/90 sm:text-sm sm:tracking-[0.45em]"
         >
           AI Fitness Coach — Trained on Real Experience
         </motion.p>
@@ -149,8 +158,8 @@ function Hero() {
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="mx-auto mt-5 flex max-w-2xl flex-wrap justify-center gap-x-1.5 gap-y-1 text-base text-gray-400"
-          transition={{ delayChildren: 0.8 }}
+          transition={{ delayChildren: 0.9 }}
+          className="mx-auto mt-8 flex max-w-2xl flex-wrap justify-center gap-x-1.5 gap-y-1 text-base font-light leading-relaxed text-gray-400 sm:text-lg"
         >
           {subtitle.split(" ").map((word, i) => (
             <motion.span key={i} variants={wordFade}>
@@ -162,13 +171,13 @@ function Hero() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.4 }}
-          className="mt-10 flex items-center justify-center"
+          transition={{ duration: 0.8, delay: 1.5, ease: EASE_OUT }}
+          className="mt-12 flex items-center justify-center"
         >
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }}>
             <Link
               href="/chat"
-              className="animate-pulse-glow inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-8 py-4 text-base font-semibold text-white"
+              className="animate-border-glow group inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-9 py-4 text-base font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
             >
               Start Chatting
               <svg
@@ -180,6 +189,7 @@ function Hero() {
                 strokeWidth="2.2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="transition-transform group-hover:translate-x-1"
               >
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
@@ -193,8 +203,8 @@ function Hero() {
         href="#features"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 2 }}
-        className="absolute bottom-8 left-1/2 -translate-x-1/2 text-gray-500 hover:text-gray-300"
+        transition={{ delay: 2.2 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-gray-500 hover:text-gray-300"
         aria-label="Scroll to features"
       >
         <motion.svg
@@ -203,11 +213,11 @@ function Hero() {
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth="2"
+          strokeWidth="1.8"
           strokeLinecap="round"
           strokeLinejoin="round"
           animate={{ y: [0, 8, 0] }}
-          transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
         >
           <path d="M12 5v14M6 13l6 6 6-6" />
         </motion.svg>
@@ -226,26 +236,20 @@ const FEATURES: Feature[] = [
   {
     title: "Zero Hallucination",
     description:
-      "Answers come only from Sumer's stored principles. If it's not in the knowledge base, IronMind says so instead of making things up.",
-    icon: (
-      <path d="M12 2 4 5v6c0 5 3.5 8.5 8 11 4.5-2.5 8-6 8-11V5l-8-3Zm-1.2 13-3-3 1.4-1.4 1.6 1.6 4.6-4.6L17 9l-6 6Z" />
-    ),
+      "Answers come only from Sumer's stored principles. If it's not in the knowledge base, IronMind says so instead of inventing advice.",
+    icon: <path d="M12 3 5 6v5c0 4.5 3 7.6 7 9 4-1.4 7-4.5 7-9V6l-7-3Zm-1 12-3-3 1.4-1.4L11 12.2l3.6-3.6L16 10l-5 5Z" />,
   },
   {
     title: "Real Experience (5.5 Years)",
     description:
       "Every principle is drawn from 5.5 years of actual lifting — not scraped blog posts or generic fitness filler.",
-    icon: (
-      <path d="M6.5 6.5 4 9l2 2-1 1-2-2-1 1 8 8 1-1-2-2 1-1 2 2 2.5-2.5-2-2 1-1 2 2 1-1-8-8-1 1 2 2-1 1-2-2Z" />
-    ),
+    icon: <path d="M6.5 6.5 4 9l2 2-1 1-2-2-1 1 8 8 1-1-2-2 1-1 2 2 2.5-2.5-2-2 1-1 2 2 1-1-8-8-1 1 2 2-1 1-2-2Z" />,
   },
   {
     title: "Source Citations",
     description:
-      "Each answer shows exactly which principles it drew from, with title and category — so you can see the reasoning.",
-    icon: (
-      <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5ZM8 12h8v1.6H8V12Zm0 3.4h8V17H8v-1.6Z" />
-    ),
+      "Each answer shows exactly which principles it drew from, with title and category — so you can trace the reasoning.",
+    icon: <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm8 1.5V8h4.5L14 3.5ZM8 12h8v1.6H8V12Zm0 3.4h8V17H8v-1.6Z" />,
   },
 ];
 
@@ -253,51 +257,55 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
   return (
     <motion.div
       variants={fadeUp}
-      whileHover={{ y: -8 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="group relative rounded-2xl border border-white/10 bg-white/5 p-7 backdrop-blur-md transition-shadow hover:shadow-2xl hover:shadow-blue-500/10"
+      whileHover={{ y: -10 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className="group relative rounded-3xl p-px"
     >
-      <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-400/20 text-cyan-300 ring-1 ring-white/10">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+      {/* gradient border layer (animates on hover) */}
+      <div className="animate-border-shimmer absolute inset-0 rounded-3xl bg-[linear-gradient(110deg,rgba(59,130,246,0.5),rgba(6,182,212,0.15),rgba(139,92,246,0.5),rgba(6,182,212,0.15),rgba(59,130,246,0.5))] opacity-40 transition-opacity duration-500 group-hover:opacity-100" />
+
+      {/* inner card */}
+      <div className="relative h-full rounded-3xl bg-gray-900/90 p-9 backdrop-blur-sm">
+        <svg
+          width="44"
+          height="44"
+          viewBox="0 0 24 24"
+          className="mb-6"
+          fill="url(#iconGradient)"
+        >
           {feature.icon}
         </svg>
+        <h3 className="text-xl font-bold text-white">{feature.title}</h3>
+        <p className="mt-3 text-sm font-light leading-relaxed text-gray-400">
+          {feature.description}
+        </p>
+        <span className="pointer-events-none absolute right-7 top-7 font-mono text-xs text-white/10">
+          0{index + 1}
+        </span>
       </div>
-      <h3 className="text-lg font-semibold text-white">{feature.title}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-gray-400">
-        {feature.description}
-      </p>
-      <span className="pointer-events-none absolute right-5 top-5 text-xs font-mono text-white/10">
-        0{index + 1}
-      </span>
     </motion.div>
   );
 }
 
 function Features() {
   return (
-    <section id="features" className="relative px-6 py-28">
+    <section id="features" className="relative px-6 py-52">
       <div className="mx-auto max-w-6xl">
-        <motion.div
-          variants={fadeUp}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          className="mx-auto max-w-2xl text-center"
-        >
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <h2 className="text-5xl font-black tracking-tight text-white sm:text-6xl">
             Built to be trusted
           </h2>
-          <p className="mt-3 text-gray-400">
+          <p className="mt-5 text-lg font-light text-gray-400">
             Not another chatbot that confidently invents advice.
           </p>
-        </motion.div>
+        </Reveal>
 
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: "-80px" }}
-          className="mt-14 grid gap-6 md:grid-cols-3"
+          viewport={{ once: true, margin: "-100px" }}
+          className="mt-20 grid gap-8 md:grid-cols-3"
         >
           {FEATURES.map((f, i) => (
             <FeatureCard key={f.title} feature={f} index={i} />
@@ -326,41 +334,50 @@ const STEPS = [
 
 function HowItWorks() {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const inView = useInView(ref, { once: true, margin: "-120px" });
 
   return (
-    <section id="how-it-works" className="relative px-6 py-28">
+    <section id="how-it-works" className="relative px-6 py-52">
       <div ref={ref} className="mx-auto max-w-5xl">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+        <Reveal className="mx-auto max-w-3xl text-center">
+          <h2 className="text-5xl font-black tracking-tight text-white sm:text-6xl">
             How it works
           </h2>
-          <p className="mt-3 text-gray-400">Three steps, every time.</p>
-        </div>
+          <p className="mt-5 text-lg font-light text-gray-400">
+            Three steps, every time.
+          </p>
+        </Reveal>
 
-        <div className="relative mt-16 grid gap-10 md:grid-cols-3">
-          {/* connecting line (desktop) */}
-          <div className="absolute left-0 right-0 top-7 hidden h-px bg-gradient-to-r from-transparent via-white/15 to-transparent md:block" />
+        <div className="relative mt-24 grid gap-16 md:grid-cols-3 md:gap-8">
+          {/* connecting timeline line (draws itself on scroll) */}
+          <div className="absolute left-0 right-0 top-8 hidden h-px overflow-hidden md:block">
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={inView ? { scaleX: 1 } : {}}
+              transition={{ duration: 1.2, ease: EASE_OUT, delay: 0.2 }}
+              style={{ transformOrigin: "left" }}
+              className="h-full w-full bg-gradient-to-r from-blue-500 via-cyan-400 to-purple-500"
+            />
+          </div>
 
           {STEPS.map((step, i) => (
             <motion.div
               key={step.title}
               initial={{ opacity: 0, y: 30 }}
               animate={inView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: i * 0.2 }}
+              transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.3 + i * 0.2 }}
               className="relative flex flex-col items-center text-center"
             >
-              <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-gray-950">
-                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 p-[2px]">
-                  <span className="flex h-full w-full items-center justify-center rounded-full bg-gray-950 text-lg font-bold text-white">
-                    {i + 1}
-                  </span>
-                </span>
-              </div>
-              <h3 className="mt-5 text-xl font-semibold text-white">
-                {step.title}
-              </h3>
-              <p className="mt-2 max-w-xs text-sm leading-relaxed text-gray-400">
+              {/* watermark number */}
+              <span className="pointer-events-none absolute -top-10 select-none text-8xl font-black leading-none text-white/[0.06]">
+                {i + 1}
+              </span>
+
+              {/* node on the timeline */}
+              <span className="relative z-10 mb-6 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-purple-500 ring-8 ring-[#0a0f1e]" />
+
+              <h3 className="text-2xl font-bold text-white">{step.title}</h3>
+              <p className="mt-3 max-w-xs text-sm font-light leading-relaxed text-gray-400">
                 {step.description}
               </p>
             </motion.div>
@@ -377,43 +394,94 @@ function HowItWorks() {
 
 function About() {
   return (
-    <section id="about" className="relative px-6 py-28">
-      <motion.div
-        variants={fadeUp}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-100px" }}
-        className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-gradient-to-b from-white/5 to-transparent p-10 text-center backdrop-blur-sm sm:p-14"
-      >
-        <p className="text-sm font-semibold uppercase tracking-widest text-cyan-400">
+    <section
+      id="about"
+      className="relative overflow-hidden px-6 py-52"
+      style={{
+        background:
+          "linear-gradient(180deg, transparent, rgba(59,130,246,0.06) 40%, rgba(139,92,246,0.08) 100%)",
+      }}
+    >
+      <Reveal className="relative mx-auto max-w-4xl text-center">
+        {/* decorative quotation mark */}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 select-none bg-gradient-to-b from-blue-500/25 to-transparent bg-clip-text font-serif text-[16rem] leading-none text-transparent"
+        >
+          &ldquo;
+        </span>
+
+        <p className="text-sm font-semibold uppercase tracking-[0.4em] text-cyan-400">
           About
         </p>
-        <p className="mt-4 text-2xl font-medium leading-snug text-gray-100 sm:text-3xl">
+        <p className="mt-8 text-4xl font-bold leading-tight text-white sm:text-5xl">
           Built by Sumer Thakur — 5.5 years of lifting, translated into AI.
         </p>
-        <p className="mx-auto mt-5 max-w-xl text-gray-400">
+        <p className="mx-auto mt-8 max-w-2xl text-lg font-light leading-relaxed text-gray-400">
           IronMind turns hard-won training experience into an assistant that only
           speaks from what it actually knows. No hype, no hallucinations — just
           the principles that worked.
         </p>
-      </motion.div>
+      </Reveal>
     </section>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/*  Footer                                                             */
+/*  Final CTA + Footer                                                 */
 /* ------------------------------------------------------------------ */
+
+function FinalCTA() {
+  return (
+    <section className="relative px-6 py-44 text-center">
+      <Reveal className="mx-auto max-w-2xl">
+        <h2 className="text-5xl font-black tracking-tight text-white sm:text-6xl">
+          Ready to start?
+        </h2>
+        <p className="mt-5 text-lg font-light text-gray-400">
+          Ask your first question and see the difference grounded answers make.
+        </p>
+        <motion.div
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
+          className="mt-10 inline-block"
+        >
+          <Link
+            href="/chat"
+            className="animate-border-glow inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-9 py-4 text-base font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/10"
+          >
+            Start Chatting
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </Link>
+        </motion.div>
+      </Reveal>
+    </section>
+  );
+}
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 px-6 py-12">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 sm:flex-row">
+    <footer className="relative px-6 pb-16 pt-20">
+      {/* gradient divider */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/40 to-transparent" />
+
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 sm:flex-row">
         <div className="text-center sm:text-left">
-          <p className="text-lg font-bold text-white">
+          <p className="text-xl font-bold text-white">
             Iron<span className="text-blue-500">Mind</span>
           </p>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm font-light text-gray-500">
             Built by Sumer Thakur
           </p>
         </div>
@@ -423,16 +491,15 @@ function Footer() {
             href="https://github.com/SumerThakur1771/IronMind"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-gray-400 transition-colors hover:border-white/30 hover:text-white"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-gray-400 transition-colors hover:border-white/30 hover:text-white"
             aria-label="GitHub repository"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.09.68-.22.68-.49v-1.7c-2.78.62-3.37-1.2-3.37-1.2-.46-1.18-1.11-1.5-1.11-1.5-.9-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.55-1.14-4.55-5.05 0-1.11.39-2.02 1.03-2.74-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.74 0 3.92-2.34 4.79-4.57 5.04.36.32.68.94.68 1.9v2.82c0 .27.18.59.69.49A10.02 10.02 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
             </svg>
           </a>
-          {/* social placeholders */}
           <span
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/5 text-gray-600"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/5 text-gray-600"
             aria-label="Social link placeholder"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -440,7 +507,7 @@ function Footer() {
             </svg>
           </span>
           <span
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/5 text-gray-600"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/5 text-gray-600"
             aria-label="Social link placeholder"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -459,12 +526,24 @@ function Footer() {
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gray-950 text-white antialiased">
+    <main className="grain relative min-h-screen overflow-x-hidden bg-[#0a0f1e] font-light text-white antialiased">
+      {/* shared gradient definition for feature icons */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="iconGradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="50%" stopColor="#06b6d4" />
+            <stop offset="100%" stopColor="#8b5cf6" />
+          </linearGradient>
+        </defs>
+      </svg>
+
       <Navbar />
       <Hero />
       <Features />
       <HowItWorks />
       <About />
+      <FinalCTA />
       <Footer />
     </main>
   );
