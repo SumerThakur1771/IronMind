@@ -91,21 +91,17 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [lastQuestion, setLastQuestion] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages, loading, failed]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const question = input.trim();
-    if (!question || loading) return;
-
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
-    setInput("");
+  async function send(question: string) {
+    setFailed(false);
     setLoading(true);
-
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -119,16 +115,26 @@ export default function ChatPage() {
         { role: "assistant", content: data.answer, sources: data.sources },
       ]);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Something went wrong. Please try again.",
-        },
-      ]);
+      // Surface a retryable error instead of a dead-end message.
+      setFailed(true);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const question = input.trim();
+    if (!question || loading) return;
+
+    setMessages((prev) => [...prev, { role: "user", content: question }]);
+    setInput("");
+    setLastQuestion(question);
+    await send(question);
+  }
+
+  function handleRetry() {
+    if (lastQuestion && !loading) send(lastQuestion);
   }
 
   return (
@@ -219,6 +225,35 @@ export default function ChatPage() {
           {loading && (
             <div className="flex justify-start">
               <LoadingIndicator />
+            </div>
+          )}
+
+          {failed && !loading && (
+            <div className="flex justify-start">
+              <div className="glass-card max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3">
+                <p className="text-sm text-gray-300">
+                  Our AI is temporarily busy. Please try again in a moment.
+                </p>
+                <button
+                  onClick={handleRetry}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-500 to-cyan-400 px-4 py-1.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/25"
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M23 4v6h-6M1 20v-6h6" />
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                  </svg>
+                  Try Again
+                </button>
+              </div>
             </div>
           )}
 

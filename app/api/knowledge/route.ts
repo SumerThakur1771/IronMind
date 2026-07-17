@@ -1,20 +1,26 @@
 import prisma from "@/app/lib/prisma";
 import { generateEmbedding } from "@/app/lib/ai";
-import { getAuth } from "@/app/lib/auth";
+import { getAuth, isAdmin } from "@/app/lib/auth";
+import {
+  CATEGORIES,
+  MAX_TITLE_LENGTH,
+  MAX_CONTENT_LENGTH,
+} from "@/app/lib/constants";
+import { logError, newRequestId } from "@/app/lib/logger";
 import { NextResponse, NextRequest } from "next/server";
 
-const CATEGORIES = ["nutrition", "training", "recovery", "mindset"];
-const MAX_TITLE = 200;
-const MAX_CONTENT = 5000;
+export async function GET(request: NextRequest) {
+  // Reading the knowledge base requires authentication.
+  if (!getAuth(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function GET() {
+  const requestId = newRequestId();
   try {
-    const data = await prisma.knowledge.findMany({
-      orderBy: { id: "asc" },
-    });
+    const data = await prisma.knowledge.findMany({ orderBy: { id: "asc" } });
     return NextResponse.json(data);
   } catch (err) {
-    console.error("knowledge GET error:", err);
+    logError("GET /api/knowledge", err, requestId);
     return NextResponse.json(
       { error: "Failed to load knowledge entries." },
       { status: 500 },
@@ -23,11 +29,16 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  // Require a valid session — this is a write to the knowledge base.
-  if (!getAuth(request)) {
+  // Writing to the knowledge base requires an admin session.
+  const auth = getAuth(request);
+  if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (!isAdmin(auth)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
+  const requestId = newRequestId();
   try {
     const body = await request.json().catch(() => null);
     const title = typeof body?.title === "string" ? body.title.trim() : "";
@@ -46,21 +57,19 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
-    if (title.length > MAX_TITLE || content.length > MAX_CONTENT) {
+    if (title.length > MAX_TITLE_LENGTH || content.length > MAX_CONTENT_LENGTH) {
       return NextResponse.json(
         {
-          error: `Title must be ≤ ${MAX_TITLE} and content ≤ ${MAX_CONTENT} characters.`,
+          error: `Title must be ≤ ${MAX_TITLE_LENGTH} and content ≤ ${MAX_CONTENT_LENGTH} characters.`,
         },
         { status: 400 },
       );
     }
 
-    // Generate the embedding FIRST. If this external call fails, nothing is
-    // written — so we never leave a knowledge row without its embedding.
+    // Generate the embedding FIRST so a failure never orphans a knowledge row.
     const embedding = await generateEmbedding(content);
     const vector = `[${embedding.join(",")}]`;
 
-    // Insert the entry and its embedding atomically.
     const entry = await prisma.$transaction(async (tx) => {
       const created = await tx.knowledge.create({
         data: { title, category, content },
@@ -71,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(entry, { status: 201 });
   } catch (err) {
-    console.error("knowledge POST error:", err);
+    logError("POST /api/knowledge", err, requestId);
     return NextResponse.json(
       { error: "Failed to create knowledge entry." },
       { status: 500 },

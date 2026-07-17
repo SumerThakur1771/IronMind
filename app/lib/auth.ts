@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import type { NextRequest } from "next/server";
+import { JWT_EXPIRY } from "@/app/lib/constants";
 
 export const TOKEN_COOKIE = "token";
 export const TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7 days (seconds)
@@ -17,7 +18,7 @@ function getSecret(): string {
 }
 
 export function signToken(payload: TokenPayload): string {
-  return jwt.sign(payload, getSecret(), { expiresIn: "7d" });
+  return jwt.sign(payload, getSecret(), { expiresIn: JWT_EXPIRY });
 }
 
 export function verifyToken(token: string): TokenPayload | null {
@@ -33,6 +34,11 @@ export function getAuth(request: NextRequest): TokenPayload | null {
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
   if (!token) return null;
   return verifyToken(token);
+}
+
+/** True when the payload belongs to an admin user. */
+export function isAdmin(payload: TokenPayload | null): boolean {
+  return payload?.role === "admin";
 }
 
 /** Standard options for the auth cookie. */
