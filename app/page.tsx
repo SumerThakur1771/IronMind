@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import {
   motion,
@@ -258,9 +259,9 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    title: "Real Experience (5.5 Years)",
+    title: "Real Experience (6 Years)",
     description:
-      "Every principle is drawn from 5.5 years of actual lifting — not scraped blog posts or generic fitness filler.",
+      "Every principle is drawn from 6 years of actual lifting — not scraped blog posts or generic fitness filler.",
     icon: (
       <>
         <path d="M2.5 12h2M19.5 12h2" />
@@ -566,7 +567,7 @@ function About() {
           About
         </p>
         <p className="mt-8 text-4xl font-bold leading-tight text-white sm:text-5xl">
-          Built by Sumer Thakur — 5.5 years of lifting, translated into AI.
+          Built by Sumer Thakur — 6 years of lifting, translated into AI.
         </p>
         <p className="mx-auto mt-8 max-w-2xl text-lg font-light leading-relaxed text-gray-400">
           IronMind turns hard-won training experience into an assistant that only
@@ -574,6 +575,57 @@ function About() {
           the principles that worked.
         </p>
       </Reveal>
+
+      {/* before / after transformation */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 1, ease: EASE_OUT }}
+        className="relative mx-auto mt-20 max-w-4xl"
+      >
+        <div className="flex flex-col items-center justify-center gap-8 sm:flex-row sm:gap-12">
+          {/* before */}
+          <figure className="flex flex-col items-center gap-3">
+            <div className="glow-border">
+              <div className="overflow-hidden rounded-[calc(1rem-1px)]">
+                <Image
+                  src="/before.jpeg"
+                  alt="Sumer at the start of his lifting journey, May 2020"
+                  width={280}
+                  height={340}
+                  className="h-[340px] w-[280px] object-cover object-center"
+                />
+              </div>
+            </div>
+            <figcaption className="text-sm font-medium text-gray-400">
+              Day 1 — May 2020
+            </figcaption>
+          </figure>
+
+          {/* after */}
+          <figure className="flex flex-col items-center gap-3">
+            <div className="glow-border">
+              <div className="overflow-hidden rounded-[calc(1rem-1px)]">
+                <Image
+                  src="/after.jpeg"
+                  alt="Sumer six years into consistent training, 2026"
+                  width={280}
+                  height={340}
+                  className="h-[340px] w-[280px] object-cover object-center"
+                />
+              </div>
+            </div>
+            <figcaption className="text-sm font-medium text-gray-400">
+              6 Years Later — 2026
+            </figcaption>
+          </figure>
+        </div>
+
+        <p className="mx-auto mt-12 max-w-2xl text-center text-lg font-light text-gray-300">
+          The same principles that built this transformation now power IronMind AI.
+        </p>
+      </motion.div>
     </section>
   );
 }
