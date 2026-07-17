@@ -1,3 +1,4 @@
+import "@/app/lib/env"; // validate required env vars at startup (throws if missing)
 import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 

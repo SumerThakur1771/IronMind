@@ -19,8 +19,20 @@ export default function AdminPage() {
   const [loadingEntries, setLoadingEntries] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setUserEmail(data.email ?? null);
+        }
+      } catch {
+        // non-fatal
+      }
+    }
     async function loadEntries() {
       try {
         const response = await fetch("/api/knowledge");
@@ -32,6 +44,7 @@ export default function AdminPage() {
         setLoadingEntries(false);
       }
     }
+    loadUser();
     loadEntries();
   }, []);
 
@@ -86,10 +99,14 @@ export default function AdminPage() {
 
       <div className="relative z-10 mx-auto max-w-2xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="w-20" />
-          <h1 className="text-center text-4xl font-black tracking-tight">
-            <span className="text-gradient">Knowledge Base</span>
-          </h1>
+          <div className="min-w-0 text-left">
+            {userEmail && (
+              <p className="truncate text-xs font-light text-gray-500">
+                Logged in as{" "}
+                <span className="text-gray-300">{userEmail}</span>
+              </p>
+            )}
+          </div>
           <button
             onClick={handleLogout}
             className="btn-secondary shrink-0 px-4 py-2 text-sm"
@@ -97,6 +114,9 @@ export default function AdminPage() {
             Log out
           </button>
         </div>
+        <h1 className="mt-6 text-center text-4xl font-black tracking-tight">
+          <span className="text-gradient">Knowledge Base</span>
+        </h1>
         <p className="mt-3 text-center font-light text-gray-400">
           Add and manage the principles IronMind answers from.
         </p>
@@ -119,9 +139,16 @@ export default function AdminPage() {
         {/* entries */}
         <div className="mt-10 flex flex-col gap-4">
           {loadingEntries ? (
-            <p className="text-center text-sm font-light text-gray-500">
-              Loading entries…
-            </p>
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="glass-card animate-pulse p-5">
+                  <div className="h-5 w-1/3 rounded bg-white/10" />
+                  <div className="mt-2 h-4 w-20 rounded-full bg-white/5" />
+                  <div className="mt-4 h-3 w-full rounded bg-white/5" />
+                  <div className="mt-2 h-3 w-4/5 rounded bg-white/5" />
+                </div>
+              ))}
+            </>
           ) : entries.length === 0 ? (
             <p className="text-center text-sm font-light text-gray-500">
               No entries yet. Add your first principle above.

@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,11 +20,11 @@ export default function RegisterPage() {
       const request = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, inviteCode }),
       });
-      const data = await request.json();
-      if (data.error) {
-        setError(data.error);
+      const data = await request.json().catch(() => ({}));
+      if (!request.ok || data.error) {
+        setError(data.error || "Registration failed. Please try again.");
         return;
       }
       window.location.href = "/login";
@@ -89,6 +90,20 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               className="input-styled"
               autoComplete="new-password"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-gray-400">
+              Invite code
+            </label>
+            <input
+              type="text"
+              placeholder="Enter your invite code"
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value)}
+              className="input-styled"
+              autoComplete="off"
             />
           </div>
 
