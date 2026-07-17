@@ -21,12 +21,12 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await request.json();
-      if (data.error) {
-        setError(data.error);
+      const data = await request.json().catch(() => ({}));
+      if (!request.ok || data.error) {
+        setError(data.error || "Login failed. Please try again.");
         return;
       }
-      document.cookie = `token=${data}; path=/`;
+      // The server sets an HttpOnly auth cookie; just navigate.
       window.location.href = "/admin";
     } catch {
       setError("Something went wrong. Please try again.");

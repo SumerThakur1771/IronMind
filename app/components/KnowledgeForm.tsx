@@ -8,6 +8,7 @@ interface KnowledgeFormProps {
   content: string;
   setContent: (value: string) => void;
   handleSubmit: () => void;
+  submitting?: boolean;
 }
 
 export default function KnowledgeForm({
@@ -18,6 +19,7 @@ export default function KnowledgeForm({
   category,
   setCategory,
   handleSubmit,
+  submitting = false,
 }: KnowledgeFormProps) {
   return (
     <div className="flex flex-col gap-4 text-left">
@@ -74,8 +76,12 @@ export default function KnowledgeForm({
         />
       </div>
 
-      <button onClick={handleSubmit} className="btn-primary mt-2">
-        Add principle
+      <button
+        onClick={handleSubmit}
+        disabled={submitting}
+        className="btn-primary mt-2"
+      >
+        {submitting ? "Adding…" : "Add principle"}
       </button>
     </div>
   );

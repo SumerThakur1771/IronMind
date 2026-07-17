@@ -1,24 +1,46 @@
 import prisma from "@/app/lib/prisma";
 import { NextResponse, NextRequest } from "next/server";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import { signToken, TOKEN_COOKIE, authCookieOptions } from "@/app/lib/auth";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const user = await prisma.user.findUnique({
-    where: { email: body.email },
-  });
-  if (!user) {
-    return NextResponse.json({ error: "user does not exists" });
-  }
-  const passwordMatch = await bcrypt.compare(body.password, user.passwordHash);
-  if (!passwordMatch) {
-    return NextResponse.json({ error: "wrong password" });
-  } else {
-    const token = jwt.sign(
-      { userId: user.id, email: body.email, role: user.role },
-      process.env.JWT_SECRET!,
+  try {
+    const body = await request.json().catch(() => null);
+    const email = typeof body?.email === "string" ? body.email.trim() : "";
+    const password = typeof body?.password === "string" ? body.password : "";
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { error: "Email and password are required." },
+        { status: 400 },
+      );
+    }
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Generic message to avoid user enumeration.
+    const invalid = NextResponse.json(
+      { error: "Invalid email or password." },
+      { status: 401 },
     );
-    return NextResponse.json(token);
+    if (!user) return invalid;
+
+    const passwordMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordMatch) return invalid;
+
+    const token = signToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const response = NextResponse.json({ success: true, email: user.email });
+    response.cookies.set(TOKEN_COOKIE, token, authCookieOptions());
+    return response;
+  } catch (err) {
+    console.error("login error:", err);
+    return NextResponse.json(
+      { error: "Something went wrong. Please try again." },
+      { status: 500 },
+    );
   }
 }

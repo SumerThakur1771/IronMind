@@ -1,15 +1,31 @@
 import { NextResponse, NextRequest } from "next/server";
+import { jwtVerify } from "jose";
 
 export const config = {
   matcher: ["/admin/:path*"],
 };
 
-export function middleware(request: NextRequest) {
-  const tokenCookie = request.cookies.get("token");
+export async function middleware(request: NextRequest) {
+  const token = request.cookies.get("token")?.value;
+  const loginUrl = new URL("/login", request.url);
 
-  if (!tokenCookie) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  if (!token) {
+    return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    return NextResponse.redirect(loginUrl);
+  }
+
+  try {
+    // Verify the signature and expiry — not just that a cookie exists.
+    await jwtVerify(token, new TextEncoder().encode(secret));
+    return NextResponse.next();
+  } catch {
+    // Invalid or expired token — clear it and send to login.
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete("token");
+    return response;
+  }
 }

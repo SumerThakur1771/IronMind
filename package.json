@@ -15,6 +15,7 @@
     "@studio-freight/lenis": "^1.0.42",
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.42.2",
+    "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.3",
     "next": "16.1.6",
     "react": "19.2.3",
