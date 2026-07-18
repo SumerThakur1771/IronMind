@@ -1,6 +1,19 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getRelevantKnowledge } from "@/app/lib/rag";
 import { generateResponse, streamResponse } from "@/app/lib/ai";
+import { getAuth } from "@/app/lib/auth";
+import {
+  getVisitorId,
+  newVisitorId,
+  VISITOR_COOKIE,
+  visitorCookieOptions,
+  serializeVisitorCookie,
+} from "@/app/lib/visitor";
+import {
+  resolveSession,
+  insertUserMessage,
+  saveAssistantMessage,
+} from "@/app/lib/chat-store";
 import {
   SIMILARITY_THRESHOLD,
   MAX_QUESTION_LENGTH,
@@ -17,6 +30,8 @@ export async function POST(request: NextRequest) {
   const requestId = newRequestId();
   const body = await request.json().catch(() => null);
   const question: string | undefined = body?.question;
+  const requestedSessionId: string | undefined =
+    typeof body?.sessionId === "string" ? body.sessionId : undefined;
 
   if (!question || typeof question !== "string" || !question.trim()) {
     return NextResponse.json(
@@ -31,7 +46,41 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // --- RAG (buffered): embed → vector search → sources. Fast, needed up front.
+  // --- Identity: anonymous visitor cookie (+ optional logged-in user).
+  const existingVisitor = getVisitorId(request);
+  const visitorId = existingVisitor ?? newVisitorId();
+  const isNewVisitor = !existingVisitor;
+  const userId = getAuth(request)?.userId ?? null;
+
+  // --- Persist the session + user message up front (retry-deduped).
+  let sessionId: string;
+  try {
+    const s = await resolveSession({
+      visitorId,
+      userId,
+      sessionId: requestedSessionId,
+      question,
+    });
+    sessionId = s.id;
+    if (!s.skipUserInsert) await insertUserMessage(sessionId, question);
+  } catch (err) {
+    logError("POST /api/chat (persist user)", err, requestId);
+    return NextResponse.json(
+      { error: "Failed to save your message. Please try again." },
+      { status: 502 }
+    );
+  }
+
+  // Attach session id (+ visitor cookie) to a JSON response.
+  function withMeta(res: NextResponse): NextResponse {
+    res.headers.set("X-Chat-Session", sessionId);
+    if (isNewVisitor) {
+      res.cookies.set(VISITOR_COOKIE, visitorId, visitorCookieOptions());
+    }
+    return res;
+  }
+
+  // --- RAG (buffered): embed → vector search → sources.
   let context: string;
   let prompt: string;
   let sources: Array<{
@@ -47,7 +96,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (relevant.length === 0) {
-      return NextResponse.json({ answer: NO_VIEW_MESSAGE, sources: [] });
+      await saveAssistantMessage(sessionId, NO_VIEW_MESSAGE, []);
+      return withMeta(
+        NextResponse.json({ answer: NO_VIEW_MESSAGE, sources: [] })
+      );
     }
 
     context = relevant
@@ -62,9 +114,11 @@ export async function POST(request: NextRequest) {
     }));
   } catch (err) {
     logError("POST /api/chat (rag)", err, requestId);
-    return NextResponse.json(
-      { error: "Failed to generate a response. Please try again." },
-      { status: 502 }
+    return withMeta(
+      NextResponse.json(
+        { error: "Failed to generate a response. Please try again." },
+        { status: 502 }
+      )
     );
   }
 
@@ -72,22 +126,25 @@ export async function POST(request: NextRequest) {
   async function buffered(): Promise<NextResponse> {
     try {
       const answer = await generateResponse(prompt, context);
-      return NextResponse.json({ answer, sources });
+      await saveAssistantMessage(sessionId, answer, sources);
+      return withMeta(NextResponse.json({ answer, sources }));
     } catch (err) {
       logError("POST /api/chat (buffered fallback)", err, requestId);
-      return NextResponse.json(
-        { error: "Failed to generate a response. Please try again." },
-        { status: 502 }
+      return withMeta(
+        NextResponse.json(
+          { error: "Failed to generate a response. Please try again." },
+          { status: 502 }
+        )
       );
     }
   }
 
   // --- Generation (streamed): plain-text token body + sources in a header.
+  //     The full answer is accumulated and persisted when the stream closes.
   try {
     const gen = streamResponse(prompt, context);
     const first = await gen.next();
 
-    // Streaming produced nothing → transparently fall back to a buffered answer.
     if (first.done) {
       return buffered();
     }
@@ -95,29 +152,43 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
+        let acc = "";
         try {
-          if (first.value) controller.enqueue(encoder.encode(first.value));
+          if (first.value) {
+            acc += first.value;
+            controller.enqueue(encoder.encode(first.value));
+          }
           for await (const token of gen) {
+            acc += token;
             controller.enqueue(encoder.encode(token));
           }
         } catch (err) {
-          // Mid-stream failure: keep whatever partial text was sent, then close.
           logError("POST /api/chat (stream)", err, requestId);
         } finally {
           controller.close();
+          // Persist the assistant answer even if the client disconnected.
+          if (acc) {
+            try {
+              await saveAssistantMessage(sessionId, acc, sources);
+            } catch (err) {
+              logError("POST /api/chat (persist assistant)", err, requestId);
+            }
+          }
         }
       },
     });
 
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        "X-Chat-Sources": encodeURIComponent(JSON.stringify(sources)),
-      },
+    const headers = new Headers({
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Chat-Sources": encodeURIComponent(JSON.stringify(sources)),
+      "X-Chat-Session": sessionId,
     });
+    if (isNewVisitor) {
+      headers.append("Set-Cookie", serializeVisitorCookie(visitorId));
+    }
+    return new Response(stream, { headers });
   } catch (err) {
-    // Could not open a stream from any model → buffered fallback.
     logError("POST /api/chat (stream connect)", err, requestId);
     return buffered();
   }
