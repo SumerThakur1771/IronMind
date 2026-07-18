@@ -90,33 +90,94 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
   const [failed, setFailed] = useState(false);
   const [lastQuestion, setLastQuestion] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, failed]);
+  }, [messages, loading, streaming, failed]);
+
+  // Abort any in-flight stream when the user leaves the page.
+  useEffect(() => {
+    return () => abortRef.current?.abort();
+  }, []);
+
+  function parseSources(res: Response): Source[] {
+    const raw = res.headers.get("X-Chat-Sources");
+    if (!raw) return [];
+    try {
+      return JSON.parse(decodeURIComponent(raw)) as Source[];
+    } catch {
+      return [];
+    }
+  }
 
   async function send(question: string) {
     setFailed(false);
     setLoading(true);
+    setStreaming(false);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question }),
+        signal: controller.signal,
       });
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
-      const data = await res.json();
+
+      const contentType = res.headers.get("Content-Type") || "";
+
+      // Buffered path (no-view message, or streaming fell back to JSON).
+      if (contentType.includes("application/json") || !res.body) {
+        const data = await res.json();
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: data.answer, sources: data.sources },
+        ]);
+        return;
+      }
+
+      // Streaming path: sources come in a header; body is plain-text tokens.
+      const sources = parseSources(res);
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.answer, sources: data.sources },
+        { role: "assistant", content: "", sources },
       ]);
-    } catch {
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let acc = "";
+      let firstToken = true;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        acc += decoder.decode(value, { stream: true });
+        if (firstToken) {
+          setStreaming(true); // swap the thinking bubble for the live answer
+          firstToken = false;
+        }
+        // update the last (streaming) message with accumulated text
+        setMessages((prev) => {
+          const copy = [...prev];
+          copy[copy.length - 1] = { ...copy[copy.length - 1], content: acc };
+          return copy;
+        });
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       // Surface a retryable error instead of a dead-end message.
       setFailed(true);
     } finally {
+      abortRef.current = null;
+      setStreaming(false);
       setLoading(false);
     }
   }
@@ -196,7 +257,7 @@ export default function ChatPage() {
             ))}
           </AnimatePresence>
 
-          {loading && (
+          {loading && !streaming && (
             <div className="flex justify-start">
               <LoadingIndicator />
             </div>

@@ -46,8 +46,12 @@ const FREE_MODELS = [
   "nvidia/nemotron-nano-9b-v2:free",
 ];
 
+function buildContent(prompt: string, context: string): string {
+  return `Use the following context to answer the question.\n\nContext:\n${context}\n\nQuestion:\n${prompt}`;
+}
+
 export async function generateResponse(prompt: string, context: string): Promise<string> {
-  const content = `Use the following context to answer the question.\n\nContext:\n${context}\n\nQuestion:\n${prompt}`;
+  const content = buildContent(prompt, context);
 
   let lastError = "";
   for (const model of FREE_MODELS) {
@@ -80,4 +84,87 @@ export async function generateResponse(prompt: string, context: string): Promise
   }
 
   throw new Error(`All generation models failed. Last error: ${lastError}`);
+}
+
+/**
+ * Streams the model's answer token-by-token as an async generator of text chunks.
+ *
+ * The FREE_MODELS fallback chain is used for *connection establishment* only —
+ * a 429/5xx (or a 200 that streams nothing) falls through to the next model.
+ * Once tokens are yielded we're committed to that model; a mid-stream failure
+ * throws and cannot fall back (the caller has already sent partial text).
+ */
+export async function* streamResponse(
+  prompt: string,
+  context: string,
+  signal?: AbortSignal,
+): AsyncGenerator<string> {
+  const content = buildContent(prompt, context);
+
+  let lastError = "";
+  for (const model of FREE_MODELS) {
+    const res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${openRouterKey()}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content }],
+        stream: true,
+      }),
+      signal,
+    });
+
+    if (!res.ok || !res.body) {
+      lastError = `${model} -> ${res.status}`;
+      // Transient (429/5xx) → try the next model. Fatal 4xx → stop.
+      if (res.status !== 429 && res.status < 500) {
+        throw new Error(`Streaming request failed (${lastError})`);
+      }
+      continue;
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let yieldedAny = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      // keep the last (possibly partial) line for the next chunk
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith(":")) continue; // keep-alive comment
+        if (!trimmed.startsWith("data:")) continue;
+
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") return;
+
+        try {
+          const json = JSON.parse(data);
+          const token: string | undefined = json.choices?.[0]?.delta?.content;
+          if (token) {
+            yieldedAny = true;
+            yield token;
+          }
+        } catch {
+          // ignore malformed SSE frames
+        }
+      }
+    }
+
+    if (yieldedAny) return;
+    // 200 but produced no tokens → try the next model.
+    lastError = `${model}: empty stream`;
+  }
+
+  throw new Error(`All streaming models failed. Last error: ${lastError}`);
 }
