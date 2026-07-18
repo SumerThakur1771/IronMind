@@ -70,7 +70,7 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
   );
 
   return (
-    <main className="bg-app grain relative flex h-[100dvh] overflow-hidden pt-20 text-white">
+    <main className="bg-app grain relative flex h-[100dvh] overflow-hidden pt-16 text-white">
       {/* desktop collapsible sidebar */}
       <motion.aside
         initial={false}
@@ -111,7 +111,7 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ duration: 0.3, ease: EASE }}
-              className="absolute bottom-0 left-0 top-20 w-72 bg-[#0a0f1e]"
+              className="absolute bottom-0 left-0 top-16 w-72 bg-[#0a0f1e]"
             >
               <div className="h-full bg-white/[0.03] backdrop-blur-xl">
                 <ChatSidebar
