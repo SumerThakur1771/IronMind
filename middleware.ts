@@ -8,6 +8,8 @@ export const config = {
 export async function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const loginUrl = new URL("/login", request.url);
+  // Remember where the user was headed so we can send them back after login.
+  loginUrl.searchParams.set("returnTo", request.nextUrl.pathname);
 
   if (!token) {
     return NextResponse.redirect(loginUrl);

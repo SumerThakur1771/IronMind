@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import KnowledgeForm from "../components/KnowledgeForm";
 import KnowledgeCard from "../components/KnowledgeCard";
@@ -20,6 +21,9 @@ export default function AdminPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [access, setAccess] = useState<"checking" | "admin" | "denied">(
+    "checking",
+  );
 
   useEffect(() => {
     async function loadUser() {
@@ -28,11 +32,19 @@ export default function AdminPage() {
         if (res.ok) {
           const data = await res.json();
           setUserEmail(data.email ?? null);
+          setAccess(data.role === "admin" ? "admin" : "denied");
+        } else {
+          setAccess("denied");
         }
       } catch {
-        // non-fatal
+        setAccess("denied");
       }
     }
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    if (access !== "admin") return;
     async function loadEntries() {
       try {
         const response = await fetch("/api/knowledge");
@@ -44,9 +56,8 @@ export default function AdminPage() {
         setLoadingEntries(false);
       }
     }
-    loadUser();
     loadEntries();
-  }, []);
+  }, [access]);
 
   async function handleSubmit() {
     setError("");
@@ -82,44 +93,59 @@ export default function AdminPage() {
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
     const res = await fetch(`/api/knowledge/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      // roll back the optimistic removal
       setEntries(previous);
       setError("Failed to delete entry.");
     }
   }
 
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    window.location.href = "/login";
+  // Non-admins get a clean message instead of a broken, 403-ing admin UI.
+  if (access === "denied") {
+    return (
+      <main className="bg-app grain relative flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div className="bg-mesh pointer-events-none absolute inset-0" />
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold text-white">
+            You don&apos;t have admin access
+          </h1>
+          <p className="mt-3 font-light text-gray-400">
+            This area is for managing IronMind&apos;s knowledge base.
+          </p>
+          <Link
+            href="/chat"
+            className="mt-8 inline-block rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-7 py-3 font-semibold text-white transition-shadow hover:shadow-lg hover:shadow-blue-500/25"
+          >
+            Go to Chat instead
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  if (access === "checking") {
+    return (
+      <main className="bg-app grain relative flex min-h-screen items-center justify-center text-gray-500">
+        <div className="bg-mesh pointer-events-none absolute inset-0" />
+        <p className="relative z-10 text-sm font-light">Loading…</p>
+      </main>
+    );
   }
 
   return (
-    <main className="bg-app grain relative min-h-screen px-6 py-16 text-white">
+    <main className="bg-app grain relative min-h-screen px-6 pb-16 pt-28 text-white">
       <div className="bg-mesh pointer-events-none absolute inset-0" />
 
       <div className="relative z-10 mx-auto max-w-2xl">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 text-left">
-            {userEmail && (
-              <p className="truncate text-xs font-light text-gray-500">
-                Logged in as{" "}
-                <span className="text-gray-300">{userEmail}</span>
-              </p>
-            )}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="btn-secondary shrink-0 px-4 py-2 text-sm"
-          >
-            Log out
-          </button>
-        </div>
-        <h1 className="mt-6 text-center text-4xl font-black tracking-tight">
+        <h1 className="text-center text-4xl font-black tracking-tight">
           <span className="text-gradient">Knowledge Base</span>
         </h1>
         <p className="mt-3 text-center font-light text-gray-400">
           Add and manage the principles IronMind answers from.
         </p>
+        {userEmail && (
+          <p className="mt-2 text-center text-xs font-light text-gray-600">
+            Logged in as {userEmail}
+          </p>
+        )}
 
         {/* form */}
         <div className="glass-card mt-10 p-6 sm:p-8">
