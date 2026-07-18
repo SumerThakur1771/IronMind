@@ -10,17 +10,35 @@ type AuthState = {
   role?: string;
 };
 
+function AnimatedHamburger({ open }: { open: boolean }) {
+  const line = "absolute left-0 h-0.5 w-5 rounded-full bg-current";
+  return (
+    <span className="relative block h-4 w-5">
+      <motion.span
+        className={line}
+        style={{ top: 1, originX: 0.5, originY: 0.5 }}
+        animate={open ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
+        transition={{ duration: 0.25 }}
+      />
+      <motion.span
+        className={line}
+        style={{ top: 7 }}
+        animate={open ? { opacity: 0 } : { opacity: 1 }}
+        transition={{ duration: 0.2 }}
+      />
+      <motion.span
+        className={line}
+        style={{ top: 13, originX: 0.5, originY: 0.5 }}
+        animate={open ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
+        transition={{ duration: 0.25 }}
+      />
+    </span>
+  );
+}
+
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [auth, setAuth] = useState<AuthState>({ status: "loading" });
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -50,13 +68,12 @@ export default function Navbar() {
   const isAuthed = auth.status === "authed";
   const isAdmin = isAuthed && auth.role === "admin";
 
-  // Right-side items, reused for desktop and mobile.
   const links = (
     <>
       <Link
         href="/chat"
         onClick={() => setMenuOpen(false)}
-        className="transition-colors hover:text-white"
+        className="text-gray-400 transition-colors hover:text-white"
       >
         Chat
       </Link>
@@ -65,7 +82,7 @@ export default function Navbar() {
         <Link
           href="/admin"
           onClick={() => setMenuOpen(false)}
-          className="transition-colors hover:text-white"
+          className="text-gray-400 transition-colors hover:text-white"
         >
           Admin
         </Link>
@@ -75,7 +92,7 @@ export default function Navbar() {
         <Link
           href="/login"
           onClick={() => setMenuOpen(false)}
-          className="rounded-full border border-white/10 px-4 py-1.5 transition-colors hover:border-blue-500/60 hover:text-white"
+          className="rounded-full border border-white/[0.1] px-4 py-1.5 text-gray-300 transition-all hover:border-blue-500/50 hover:text-white hover:shadow-[0_0_14px_rgba(59,130,246,0.25)]"
         >
           Login
         </Link>
@@ -84,7 +101,7 @@ export default function Navbar() {
       {isAuthed && (
         <button
           onClick={handleLogout}
-          className="rounded-full border border-white/10 px-4 py-1.5 text-left transition-colors hover:border-blue-500/60 hover:text-white"
+          className="text-left text-gray-500 transition-colors hover:text-gray-200"
         >
           Logout
         </button>
@@ -93,32 +110,18 @@ export default function Navbar() {
   );
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      <AnimatePresence>
-        {(scrolled || menuOpen) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 border-b border-white/5 bg-[#0a0f1e]/80 backdrop-blur-xl"
-          />
-        )}
-      </AnimatePresence>
-
-      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+    <header className="fixed inset-x-0 top-0 z-50 border-b border-white/[0.05] bg-white/[0.03] backdrop-blur-xl">
+      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link
           href="/"
           onClick={() => setMenuOpen(false)}
-          className="text-lg font-bold tracking-tight text-white"
+          className="text-gradient animate-gradient-x text-lg font-bold tracking-tight"
         >
-          Iron<span className="text-blue-500">Mind</span>
+          IronMind
         </Link>
 
         {/* desktop links */}
-        <div className="hidden items-center gap-7 text-sm font-light text-gray-300 sm:flex">
-          {links}
-        </div>
+        <div className="hidden items-center gap-7 text-sm sm:flex">{links}</div>
 
         {/* mobile hamburger */}
         <button
@@ -127,22 +130,7 @@ export default function Navbar() {
           aria-label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {menuOpen ? (
-              <path d="M18 6 6 18M6 6l12 12" />
-            ) : (
-              <path d="M3 12h18M3 6h18M3 18h18" />
-            )}
-          </svg>
+          <AnimatedHamburger open={menuOpen} />
         </button>
       </nav>
 
@@ -154,9 +142,9 @@ export default function Navbar() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="relative overflow-hidden border-b border-white/5 bg-[#0a0f1e]/95 backdrop-blur-xl sm:hidden"
+            className="overflow-hidden border-b border-white/[0.05] bg-[#0a0f1e]/95 backdrop-blur-xl sm:hidden"
           >
-            <div className="flex flex-col gap-4 px-6 py-5 text-base font-light text-gray-300">
+            <div className="flex flex-col gap-4 px-6 py-5 text-base">
               {links}
             </div>
           </motion.div>
