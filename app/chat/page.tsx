@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type Source = {
   knowledgeId: number;
@@ -83,6 +85,97 @@ function SourcePill({ source }: { source: Source }) {
         <span className="text-gray-500">· {source.category}</span>
       </span>
     </span>
+  );
+}
+
+// Dark-theme Markdown renderers matching the glass-card chat bubbles.
+const markdownComponents: Components = {
+  p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+  strong: ({ children }) => (
+    <strong className="font-semibold text-white">{children}</strong>
+  ),
+  em: ({ children }) => <em className="italic">{children}</em>,
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-400 hover:underline"
+    >
+      {children}
+    </a>
+  ),
+  ul: ({ children }) => (
+    <ul className="mb-2 list-disc pl-5 last:mb-0">{children}</ul>
+  ),
+  ol: ({ children }) => (
+    <ol className="mb-2 list-decimal pl-5 last:mb-0">{children}</ol>
+  ),
+  li: ({ children }) => <li className="mb-1">{children}</li>,
+  h1: ({ children }) => (
+    <h1 className="mb-2 mt-3 text-xl font-bold text-white first:mt-0">
+      {children}
+    </h1>
+  ),
+  h2: ({ children }) => (
+    <h2 className="mb-2 mt-3 text-lg font-bold text-white first:mt-0">
+      {children}
+    </h2>
+  ),
+  h3: ({ children }) => (
+    <h3 className="mb-2 mt-3 text-lg font-bold text-white first:mt-0">
+      {children}
+    </h3>
+  ),
+  table: ({ children }) => (
+    <div className="my-2 overflow-x-auto">
+      <table className="w-full border-collapse border border-white/10 text-sm">
+        {children}
+      </table>
+    </div>
+  ),
+  thead: ({ children }) => <thead className="bg-white/5">{children}</thead>,
+  th: ({ children }) => (
+    <th className="border border-white/10 px-3 py-1.5 text-left font-semibold text-white">
+      {children}
+    </th>
+  ),
+  td: ({ children }) => (
+    <td className="border border-white/10 px-3 py-1.5 align-top">{children}</td>
+  ),
+  pre: ({ children }) => (
+    <pre className="my-2 overflow-x-auto rounded-lg bg-white/5 p-3 font-mono text-sm">
+      {children}
+    </pre>
+  ),
+  code: ({ className, children }) => {
+    // Block code is wrapped in <pre> (or carries a language- class / newlines);
+    // the <pre> override supplies the block styling, so inline gets the pill.
+    const isBlock =
+      /language-/.test(className || "") || String(children).includes("\n");
+    return isBlock ? (
+      <code className="font-mono text-sm">{children}</code>
+    ) : (
+      <code className="rounded bg-white/10 px-1.5 py-0.5 font-mono text-sm">
+        {children}
+      </code>
+    );
+  },
+  blockquote: ({ children }) => (
+    <blockquote className="my-2 border-l-2 border-white/20 pl-3 text-gray-300">
+      {children}
+    </blockquote>
+  ),
+  hr: () => <hr className="my-3 border-white/10" />,
+};
+
+function MarkdownMessage({ content }: { content: string }) {
+  return (
+    <div className="text-gray-100">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {content}
+      </ReactMarkdown>
+    </div>
   );
 }
 
@@ -217,7 +310,15 @@ export default function ChatPage() {
           )}
 
           <AnimatePresence initial={false}>
-            {messages.map((message, i) => (
+            {messages.map((message, i) => {
+              // The last assistant message is "still streaming" while a stream
+              // is in progress; render it as plain text and only parse Markdown
+              // once it's complete (avoids mid-stream flicker/snapping).
+              const isStreamingMsg =
+                streaming &&
+                message.role === "assistant" &&
+                i === messages.length - 1;
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
@@ -234,7 +335,11 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     <div className="glass-card rounded-2xl rounded-bl-sm px-4 py-2.5 text-gray-100">
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      {isStreamingMsg ? (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      ) : (
+                        <MarkdownMessage content={message.content} />
+                      )}
                     </div>
                   )}
 
@@ -254,7 +359,8 @@ export default function ChatPage() {
                     )}
                 </div>
               </motion.div>
-            ))}
+              );
+            })}
           </AnimatePresence>
 
           {loading && !streaming && (
