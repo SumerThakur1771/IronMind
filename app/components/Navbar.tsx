@@ -101,7 +101,7 @@ export default function Navbar() {
       {isAuthed && (
         <button
           onClick={handleLogout}
-          className="text-left text-gray-500 transition-colors hover:text-gray-200"
+          className="text-left text-gray-400 transition-colors hover:text-gray-200"
         >
           Logout
         </button>

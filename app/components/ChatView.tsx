@@ -93,7 +93,7 @@ function SourcePill({ source }: { source: Source }) {
     <span className="glow-border inline-block text-xs">
       <span className="bg-app inline-flex items-center gap-1 rounded-[calc(1rem-1px)] px-2.5 py-1 text-gray-300">
         {source.title}
-        <span className="text-gray-500">· {source.category}</span>
+        <span className="text-gray-400">· {source.category}</span>
       </span>
     </span>
   );
@@ -370,8 +370,22 @@ export default function ChatView({
     if (lastQuestion && !loading) send(lastQuestion);
   }
 
+  const lastMsg = messages[messages.length - 1];
+  const liveAnnouncement = loading
+    ? "IronMind is generating a response."
+    : lastMsg?.role === "assistant" && !lastMsg.streaming
+      ? "IronMind responded."
+      : "";
+
   return (
     <div className="flex h-full flex-1 flex-col">
+      <h1 className="sr-only">IronMind chat</h1>
+
+      {/* screen-reader announcements for new responses */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {liveAnnouncement}
+      </div>
+
       {/* messages */}
       <div
         data-lenis-prevent
@@ -459,7 +473,7 @@ export default function ChatView({
 
                     {message.createdAt && (
                       <p
-                        className={`mt-1 text-[11px] font-light text-gray-600 ${
+                        className={`mt-1 text-[11px] font-light text-gray-400 ${
                           message.role === "user" ? "text-right" : "text-left"
                         }`}
                       >
@@ -550,7 +564,7 @@ export default function ChatView({
               </button>
             </form>
           </div>
-          <p className="mt-2 text-center text-[11px] font-light text-gray-600">
+          <p className="mt-2 text-center text-[11px] font-light text-gray-400">
             IronMind can make mistakes. Verify important information.
           </p>
         </div>

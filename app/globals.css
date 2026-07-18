@@ -30,6 +30,18 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Visible keyboard focus ring for all interactive elements (accessibility) */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* Lenis smooth scroll */
 html.lenis,
 html.lenis body {

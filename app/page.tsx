@@ -164,7 +164,7 @@ function Hero() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 2.2 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-gray-500 hover:text-gray-300"
+        className="absolute bottom-10 left-1/2 -translate-x-1/2 text-gray-400 hover:text-gray-300"
         aria-label="Scroll to features"
       >
         <motion.svg
@@ -417,7 +417,7 @@ function LiveDemo() {
             <span className="h-3 w-3 rounded-full bg-red-400/70" />
             <span className="h-3 w-3 rounded-full bg-yellow-400/70" />
             <span className="h-3 w-3 rounded-full bg-green-400/70" />
-            <span className="mx-auto rounded-md bg-white/5 px-3 py-1 text-xs text-gray-500">
+            <span className="mx-auto rounded-md bg-white/5 px-3 py-1 text-xs text-gray-400">
               ironmind.ai/chat
             </span>
           </div>
@@ -471,7 +471,7 @@ function LiveDemo() {
                       <span className="glow-border inline-block text-xs">
                         <span className="bg-app inline-flex items-center gap-1 rounded-[calc(1rem-1px)] px-2.5 py-1 text-gray-300">
                           Protein Intake
-                          <span className="text-gray-500">· nutrition</span>
+                          <span className="text-gray-400">· nutrition</span>
                         </span>
                       </span>
                     </motion.div>
@@ -633,7 +633,7 @@ function Footer() {
           >
             Iron<span className="text-blue-500">Mind</span>
           </Link>
-          <p className="mt-2 text-sm font-light text-gray-500">
+          <p className="mt-2 text-sm font-light text-gray-400">
             Built by{" "}
             <a
               href="https://github.com/SumerThakur1771"

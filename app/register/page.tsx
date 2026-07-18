@@ -136,7 +136,7 @@ export default function RegisterPage() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm font-light text-gray-500">
+        <p className="mt-6 text-center text-sm font-light text-gray-400">
           Already have an account?{" "}
           <Link
             href="/login"
@@ -148,7 +148,7 @@ export default function RegisterPage() {
         <p className="mt-3 text-center">
           <Link
             href="/"
-            className="text-xs font-light text-gray-600 transition-colors hover:text-gray-400"
+            className="text-xs font-light text-gray-400 transition-colors hover:text-gray-400"
           >
             ← Back to home
           </Link>

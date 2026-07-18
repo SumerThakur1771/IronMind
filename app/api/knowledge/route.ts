@@ -17,8 +17,24 @@ export async function GET(request: NextRequest) {
 
   const requestId = newRequestId();
   try {
-    const data = await prisma.knowledge.findMany({ orderBy: { id: "asc" } });
-    return NextResponse.json(data);
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get("limit") || "10", 10) || 10),
+    );
+
+    const [entries, total] = await Promise.all([
+      prisma.knowledge.findMany({
+        orderBy: { id: "asc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.knowledge.count(),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+    return NextResponse.json({ entries, total, page, totalPages });
   } catch (err) {
     logError("GET /api/knowledge", err, requestId);
     return NextResponse.json(
