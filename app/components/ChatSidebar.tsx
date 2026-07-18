@@ -62,18 +62,22 @@ export default function ChatSidebar({
             No past conversations yet.
           </p>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-0.5">
             {sessions.map((s) => {
               const active = s.id === activeId;
               return (
                 <li key={s.id} className="group relative">
+                  {/* active left-edge gradient accent */}
+                  {active && (
+                    <span className="absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-gradient-to-b from-blue-500 to-cyan-400" />
+                  )}
                   <Link
                     href={`/chat/${s.id}`}
                     onClick={onNavigate}
                     className={`block rounded-lg px-3 py-2 pr-8 transition-colors ${
                       active
-                        ? "bg-white/10 text-white"
-                        : "text-gray-300 hover:bg-white/5"
+                        ? "bg-white/[0.06] text-white"
+                        : "text-gray-300 hover:bg-white/[0.05]"
                     }`}
                   >
                     <p className="truncate text-sm">{s.title}</p>
@@ -88,7 +92,7 @@ export default function ChatSidebar({
                       onDelete(s.id);
                     }}
                     aria-label="Delete conversation"
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-500 opacity-0 transition-opacity hover:bg-white/10 hover:text-red-400 group-hover:opacity-100"
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-500 opacity-0 transition-opacity hover:bg-white/10 hover:text-red-400 focus:opacity-100 group-hover:opacity-100"
                   >
                     <svg
                       width="14"
