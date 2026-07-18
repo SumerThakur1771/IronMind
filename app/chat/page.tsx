@@ -16,6 +16,10 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  // True only while THIS message is actively being streamed. Rendered as plain
+  // text while true; parsed as Markdown once false. Per-message (not a global
+  // flag) so a completed message can never get stuck in the "streaming" state.
+  streaming?: boolean;
 };
 
 const LOADING_MESSAGES = [
@@ -183,15 +187,17 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [streaming, setStreaming] = useState(false);
   const [failed, setFailed] = useState(false);
   const [lastQuestion, setLastQuestion] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // A message is actively streaming iff some message carries the flag.
+  const isStreaming = messages.some((m) => m.streaming);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading, streaming, failed]);
+  }, [messages, loading, failed]);
 
   // Abort any in-flight stream when the user leaves the page.
   useEffect(() => {
@@ -211,7 +217,6 @@ export default function ChatPage() {
   async function send(question: string) {
     setFailed(false);
     setLoading(true);
-    setStreaming(false);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -228,6 +233,7 @@ export default function ChatPage() {
       const contentType = res.headers.get("Content-Type") || "";
 
       // Buffered path (no-view message, or streaming fell back to JSON).
+      // Rendered as Markdown immediately (no streaming flag).
       if (contentType.includes("application/json") || !res.body) {
         const data = await res.json();
         setMessages((prev) => [
@@ -239,30 +245,30 @@ export default function ChatPage() {
 
       // Streaming path: sources come in a header; body is plain-text tokens.
       const sources = parseSources(res);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "", sources },
-      ]);
-
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let acc = "";
-      let firstToken = true;
+      let appended = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         acc += decoder.decode(value, { stream: true });
-        if (firstToken) {
-          setStreaming(true); // swap the thinking bubble for the live answer
-          firstToken = false;
+        if (!appended) {
+          // First token: append the streaming assistant message (this also
+          // replaces the "thinking" indicator via `isStreaming`).
+          appended = true;
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: acc, sources, streaming: true },
+          ]);
+        } else {
+          setMessages((prev) => {
+            const copy = [...prev];
+            copy[copy.length - 1] = { ...copy[copy.length - 1], content: acc };
+            return copy;
+          });
         }
-        // update the last (streaming) message with accumulated text
-        setMessages((prev) => {
-          const copy = [...prev];
-          copy[copy.length - 1] = { ...copy[copy.length - 1], content: acc };
-          return copy;
-        });
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -270,7 +276,13 @@ export default function ChatPage() {
       setFailed(true);
     } finally {
       abortRef.current = null;
-      setStreaming(false);
+      // Clear the streaming flag on any message so completed answers always
+      // re-render as Markdown (never stuck as plain text).
+      setMessages((prev) =>
+        prev.some((m) => m.streaming)
+          ? prev.map((m) => (m.streaming ? { ...m, streaming: false } : m))
+          : prev,
+      );
       setLoading(false);
     }
   }
@@ -311,13 +323,10 @@ export default function ChatPage() {
 
           <AnimatePresence initial={false}>
             {messages.map((message, i) => {
-              // The last assistant message is "still streaming" while a stream
-              // is in progress; render it as plain text and only parse Markdown
-              // once it's complete (avoids mid-stream flicker/snapping).
-              const isStreamingMsg =
-                streaming &&
-                message.role === "assistant" &&
-                i === messages.length - 1;
+              // Render as plain text only while THIS message is streaming;
+              // once complete (streaming flag cleared) it re-renders as Markdown.
+              const showPlainText =
+                message.role === "assistant" && message.streaming;
               return (
               <motion.div
                 key={i}
@@ -335,7 +344,7 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     <div className="glass-card rounded-2xl rounded-bl-sm px-4 py-2.5 text-gray-100">
-                      {isStreamingMsg ? (
+                      {showPlainText ? (
                         <p className="whitespace-pre-wrap">{message.content}</p>
                       ) : (
                         <MarkdownMessage content={message.content} />
@@ -363,7 +372,7 @@ export default function ChatPage() {
             })}
           </AnimatePresence>
 
-          {loading && !streaming && (
+          {loading && !isStreaming && (
             <div className="flex justify-start">
               <LoadingIndicator />
             </div>
