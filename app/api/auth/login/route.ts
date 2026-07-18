@@ -45,7 +45,11 @@ export async function POST(request: NextRequest) {
       role: user.role,
     });
 
-    const response = NextResponse.json({ success: true, email: user.email });
+    const response = NextResponse.json({
+      success: true,
+      email: user.email,
+      role: user.role,
+    });
     response.cookies.set(TOKEN_COOKIE, token, authCookieOptions());
     return response;
   } catch (err) {

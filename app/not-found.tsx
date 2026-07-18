@@ -12,12 +12,20 @@ export default function NotFound() {
         <p className="mt-2 font-light text-gray-400">
           The page you&apos;re looking for doesn&apos;t exist.
         </p>
-        <Link
-          href="/"
-          className="mt-8 inline-block rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-7 py-3 font-semibold text-white transition-shadow hover:shadow-lg hover:shadow-blue-500/25"
-        >
-          Back to home
-        </Link>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Link
+            href="/"
+            className="inline-block rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-7 py-3 font-semibold text-white transition-shadow hover:shadow-lg hover:shadow-blue-500/25"
+          >
+            Back to home
+          </Link>
+          <Link
+            href="/chat"
+            className="inline-block rounded-full border border-white/15 bg-white/5 px-7 py-3 font-medium text-gray-200 transition-colors hover:border-white/30 hover:text-white"
+          >
+            Chat with IronMind
+          </Link>
+        </div>
       </div>
     </main>
   );

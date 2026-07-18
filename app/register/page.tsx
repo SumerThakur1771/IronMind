@@ -94,6 +94,9 @@ export default function RegisterPage() {
           </div>
 
           <div>
+            <p className="mb-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-xs font-light text-gray-400">
+              Registration is invite-only. Contact Sumer for access.
+            </p>
             <label className="mb-1.5 block text-xs font-medium text-gray-400">
               Invite code
             </label>
@@ -140,6 +143,14 @@ export default function RegisterPage() {
             className="font-medium text-blue-400 transition-colors hover:text-blue-300"
           >
             Sign in
+          </Link>
+        </p>
+        <p className="mt-3 text-center">
+          <Link
+            href="/"
+            className="text-xs font-light text-gray-600 transition-colors hover:text-gray-400"
+          >
+            ← Back to home
           </Link>
         </p>
       </motion.div>

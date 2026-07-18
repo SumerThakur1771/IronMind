@@ -26,8 +26,17 @@ export default function LoginPage() {
         setError(data.error || "Login failed. Please try again.");
         return;
       }
-      // The server sets an HttpOnly auth cookie; just navigate.
-      window.location.href = "/admin";
+      // The server sets an HttpOnly auth cookie; now decide where to go.
+      const returnTo = new URLSearchParams(window.location.search).get(
+        "returnTo",
+      );
+      const destination =
+        returnTo && returnTo.startsWith("/")
+          ? returnTo
+          : data.role === "admin"
+            ? "/admin"
+            : "/chat";
+      window.location.href = destination;
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

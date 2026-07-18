@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -138,32 +137,7 @@ export default function ChatPage() {
   }
 
   return (
-    <main className="bg-app grain relative flex h-screen flex-col text-white">
-      {/* header */}
-      <header className="relative z-10 flex items-center gap-3 px-5 py-4">
-        <Link
-          href="/"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 text-gray-400 transition-colors hover:border-white/25 hover:text-white"
-          aria-label="Back to home"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M19 12H5M11 18l-6-6 6-6" />
-          </svg>
-        </Link>
-        <h1 className="text-lg font-bold tracking-tight">
-          <span className="text-gradient">IronMind</span>
-        </h1>
-      </header>
-
+    <main className="bg-app grain relative flex h-[100dvh] flex-col pt-20 text-white">
       {/* messages */}
       <div
         data-lenis-prevent

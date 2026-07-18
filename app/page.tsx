@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   motion,
   useInView,
@@ -58,60 +58,6 @@ function Reveal({
     >
       {children}
     </motion.div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  Navigation                                                         */
-/* ------------------------------------------------------------------ */
-
-function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      <AnimatePresence>
-        {scrolled && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.4 }}
-            className="absolute inset-0 border-b border-white/5 bg-[#0a0f1e]/70 backdrop-blur-xl"
-          />
-        )}
-      </AnimatePresence>
-
-      <nav className="relative mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <Link
-          href="/"
-          className="text-lg font-bold tracking-tight text-white"
-        >
-          Iron<span className="text-blue-500">Mind</span>
-        </Link>
-        <div className="flex items-center gap-7 text-sm font-light text-gray-300">
-          <Link href="/chat" className="transition-colors hover:text-white">
-            Chat
-          </Link>
-          <Link href="/admin" className="transition-colors hover:text-white">
-            Admin
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-full border border-white/10 px-4 py-1.5 transition-colors hover:border-blue-500/60 hover:text-white"
-          >
-            Login
-          </Link>
-        </div>
-      </nav>
-    </header>
   );
 }
 
@@ -681,43 +627,36 @@ function Footer() {
 
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-8 sm:flex-row">
         <div className="text-center sm:text-left">
-          <p className="text-xl font-bold text-white">
+          <Link
+            href="/"
+            className="text-xl font-bold text-white transition-opacity hover:opacity-80"
+          >
             Iron<span className="text-blue-500">Mind</span>
-          </p>
+          </Link>
           <p className="mt-2 text-sm font-light text-gray-500">
-            Built by Sumer Thakur
+            Built by{" "}
+            <a
+              href="https://github.com/SumerThakur1771"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-400 underline-offset-2 transition-colors hover:text-white hover:underline"
+            >
+              Sumer Thakur
+            </a>
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <a
-            href="https://github.com/SumerThakur1771/IronMind"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-gray-400 transition-colors hover:border-white/30 hover:text-white"
-            aria-label="GitHub repository"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.09.68-.22.68-.49v-1.7c-2.78.62-3.37-1.2-3.37-1.2-.46-1.18-1.11-1.5-1.11-1.5-.9-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.55-1.14-4.55-5.05 0-1.11.39-2.02 1.03-2.74-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.74 0 3.92-2.34 4.79-4.57 5.04.36.32.68.94.68 1.9v2.82c0 .27.18.59.69.49A10.02 10.02 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
-            </svg>
-          </a>
-          <span
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/5 text-gray-600"
-            aria-label="Social link placeholder"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M22 5.9c-.7.3-1.5.5-2.3.6a4 4 0 0 0 1.8-2.2c-.8.5-1.7.8-2.6 1a4 4 0 0 0-6.8 3.6A11.3 11.3 0 0 1 3.6 4.8a4 4 0 0 0 1.2 5.3c-.6 0-1.2-.2-1.8-.5a4 4 0 0 0 3.2 3.9c-.6.2-1.2.2-1.8.1a4 4 0 0 0 3.7 2.8A8 8 0 0 1 2 18.3 11.3 11.3 0 0 0 8.1 20c7.3 0 11.4-6.1 11.4-11.4v-.5c.8-.6 1.5-1.3 2-2.2Z" />
-            </svg>
-          </span>
-          <span
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/5 text-gray-600"
-            aria-label="Social link placeholder"
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20 3H4a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1ZM8.3 18H5.7V9.7h2.6V18ZM7 8.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3ZM18.3 18h-2.6v-4.4c0-1.1 0-2.4-1.5-2.4s-1.7 1.1-1.7 2.3V18h-2.6V9.7h2.5v1.1h.1c.4-.7 1.2-1.4 2.5-1.4 2.7 0 3.2 1.8 3.2 4V18Z" />
-            </svg>
-          </span>
-        </div>
+        <a
+          href="https://github.com/SumerThakur1771/IronMind"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/10 text-gray-400 transition-colors hover:border-white/30 hover:text-white"
+          aria-label="GitHub repository"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.58 2 12.26c0 4.5 2.87 8.32 6.84 9.67.5.09.68-.22.68-.49v-1.7c-2.78.62-3.37-1.2-3.37-1.2-.46-1.18-1.11-1.5-1.11-1.5-.9-.63.07-.62.07-.62 1 .07 1.53 1.05 1.53 1.05.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.36-2.22-.26-4.55-1.14-4.55-5.05 0-1.11.39-2.02 1.03-2.74-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.74 0 3.92-2.34 4.79-4.57 5.04.36.32.68.94.68 1.9v2.82c0 .27.18.59.69.49A10.02 10.02 0 0 0 22 12.26C22 6.58 17.52 2 12 2Z" />
+          </svg>
+        </a>
       </div>
     </footer>
   );
@@ -741,7 +680,6 @@ export default function Home() {
         </defs>
       </svg>
 
-      <Navbar />
       <Hero />
       <Features />
       <HowItWorks />
