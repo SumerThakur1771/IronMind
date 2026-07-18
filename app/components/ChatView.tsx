@@ -16,11 +16,27 @@ type Message = {
   role: "user" | "assistant";
   content: string;
   sources?: Source[];
+  createdAt?: string;
   // True only while THIS message is actively being streamed (plain text);
   // parsed as Markdown once false. Per-message so a completed message can never
   // get stuck in the "streaming" state.
   streaming?: boolean;
 };
+
+const SUGGESTIONS = [
+  "How much protein should I eat?",
+  "Give me a beginner workout plan",
+  "Should I bulk or cut?",
+  "What supplements actually work?",
+];
+
+function formatTime(iso?: string): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
 const LOADING_MESSAGES = [
   "Scanning the knowledge base...",
@@ -202,10 +218,16 @@ export default function ChatView({
           const data = await res.json();
           setMessages(
             (data.messages ?? []).map(
-              (m: { role: string; content: string; sources?: Source[] }) => ({
+              (m: {
+                role: string;
+                content: string;
+                sources?: Source[];
+                createdAt?: string;
+              }) => ({
                 role: m.role as "user" | "assistant",
                 content: m.content,
                 sources: m.sources ?? undefined,
+                createdAt: m.createdAt,
               }),
             ),
           );
@@ -271,7 +293,12 @@ export default function ChatView({
         const data = await res.json();
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: data.answer, sources: data.sources },
+          {
+            role: "assistant",
+            content: data.answer,
+            sources: data.sources,
+            createdAt: new Date().toISOString(),
+          },
         ]);
         return;
       }
@@ -290,7 +317,13 @@ export default function ChatView({
           appended = true;
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: acc, sources, streaming: true },
+            {
+              role: "assistant",
+              content: acc,
+              sources,
+              streaming: true,
+              createdAt: new Date().toISOString(),
+            },
           ]);
         } else {
           setMessages((prev) => {
@@ -315,15 +348,22 @@ export default function ChatView({
     }
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const question = input.trim();
+  async function submit(raw: string) {
+    const question = raw.trim();
     if (!question || loading) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: question }]);
+    setMessages((prev) => [
+      ...prev,
+      { role: "user", content: question, createdAt: new Date().toISOString() },
+    ]);
     setInput("");
     setLastQuestion(question);
     await send(question);
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    submit(input);
   }
 
   function handleRetry() {
@@ -339,12 +379,33 @@ export default function ChatView({
       >
         <div className="mx-auto flex max-w-2xl flex-col gap-5">
           {messages.length === 0 && !loading && !loadingSession && (
-            <div className="mt-24 flex flex-col items-center text-center">
-              <p className="text-gradient text-5xl font-black tracking-tight opacity-40 sm:text-6xl">
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="mt-16 flex flex-col items-center text-center"
+            >
+              <p className="text-gradient text-6xl font-black tracking-tight sm:text-7xl">
                 IronMind
               </p>
-              <p className="mt-4 text-gray-500">Ask me anything about fitness.</p>
-            </div>
+              <p className="mt-4 text-gray-400">
+                Ask me anything about fitness.
+              </p>
+              <div className="mt-10 grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+                {SUGGESTIONS.map((q, i) => (
+                  <motion.button
+                    key={q}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.15 + i * 0.07 }}
+                    onClick={() => submit(q)}
+                    className="glass-card rounded-xl px-4 py-3 text-left text-sm text-gray-300 transition-colors hover:bg-white/[0.06] hover:text-white"
+                  >
+                    {q}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
           )}
 
           <AnimatePresence initial={false}>
@@ -395,6 +456,16 @@ export default function ChatView({
                           ))}
                         </motion.div>
                       )}
+
+                    {message.createdAt && (
+                      <p
+                        className={`mt-1 text-[11px] font-light text-gray-600 ${
+                          message.role === "user" ? "text-right" : "text-left"
+                        }`}
+                      >
+                        {formatTime(message.createdAt)}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               );
@@ -440,41 +511,49 @@ export default function ChatView({
         </div>
       </div>
 
-      {/* gradient separator */}
+      {/* thin gradient separator */}
       <div className="h-px bg-gradient-to-r from-transparent via-blue-500/30 to-transparent" />
 
       {/* input */}
       <footer className="relative z-10 px-5 py-4">
-        <form
-          onSubmit={handleSubmit}
-          className="glass-card mx-auto flex max-w-2xl items-center gap-2 p-2"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question..."
-            className="flex-1 bg-transparent px-3 py-2 text-white placeholder-gray-500 focus:outline-none"
-          />
-          <button
-            type="submit"
-            disabled={loading || !input.trim()}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 text-white transition-all hover:shadow-lg hover:shadow-blue-500/25 disabled:cursor-not-allowed disabled:opacity-40"
-            aria-label="Send"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+        <div className="mx-auto w-full max-w-2xl">
+          {/* gradient-border wrapper; inner glows blue on focus */}
+          <div className="glow-border">
+            <form
+              onSubmit={handleSubmit}
+              className="flex items-center gap-2 rounded-[calc(1rem-1px)] bg-[#0a0f1e] p-2 transition-shadow focus-within:shadow-[0_0_22px_rgba(59,130,246,0.18)]"
             >
-              <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />
-            </svg>
-          </button>
-        </form>
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask a question..."
+                className="flex-1 border-0 bg-transparent px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-0"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 text-white transition-all hover:shadow-lg hover:shadow-blue-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Send"
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7Z" />
+                </svg>
+              </button>
+            </form>
+          </div>
+          <p className="mt-2 text-center text-[11px] font-light text-gray-600">
+            IronMind can make mistakes. Verify important information.
+          </p>
+        </div>
       </footer>
     </div>
   );
