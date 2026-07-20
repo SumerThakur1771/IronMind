@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import KnowledgeForm from "../components/KnowledgeForm";
 import KnowledgeCard from "../components/KnowledgeCard";
 
@@ -24,6 +24,31 @@ export default function AdminPage() {
   const [access, setAccess] = useState<"checking" | "admin" | "denied">(
     "checking",
   );
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const PER_PAGE = 10;
+
+  const loadEntries = useCallback(async (targetPage: number) => {
+    setLoadingEntries(true);
+    try {
+      const response = await fetch(
+        `/api/knowledge?page=${targetPage}&limit=${PER_PAGE}`,
+      );
+      const data = await response.json();
+      if (response.ok && Array.isArray(data.entries)) {
+        setEntries(data.entries);
+        setTotal(data.total ?? 0);
+        setTotalPages(data.totalPages ?? 1);
+        setPage(data.page ?? targetPage);
+      }
+    } catch {
+      setError("Failed to load entries.");
+    } finally {
+      setLoadingEntries(false);
+    }
+  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -44,20 +69,8 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (access !== "admin") return;
-    async function loadEntries() {
-      try {
-        const response = await fetch("/api/knowledge");
-        const data = await response.json();
-        if (Array.isArray(data)) setEntries(data);
-      } catch {
-        setError("Failed to load entries.");
-      } finally {
-        setLoadingEntries(false);
-      }
-    }
-    loadEntries();
-  }, [access]);
+    if (access === "admin") loadEntries(1);
+  }, [access, loadEntries]);
 
   async function handleSubmit() {
     setError("");
@@ -77,10 +90,12 @@ export default function AdminPage() {
         setError(data.error || "Failed to add entry.");
         return;
       }
-      setEntries((prev) => [...prev, data]);
       setTitle("");
       setCategory("");
       setContent("");
+      // Jump to the last page so the newly added entry is visible.
+      const lastPage = Math.max(1, Math.ceil((total + 1) / PER_PAGE));
+      loadEntries(lastPage);
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -89,13 +104,14 @@ export default function AdminPage() {
   }
 
   async function handleDelete(id: number) {
-    const previous = entries;
-    setEntries((prev) => prev.filter((entry) => entry.id !== id));
     const res = await fetch(`/api/knowledge/${id}`, { method: "DELETE" });
     if (!res.ok) {
-      setEntries(previous);
       setError("Failed to delete entry.");
+      return;
     }
+    // Reload; step back a page if we just removed the last item on this page.
+    const target = entries.length === 1 && page > 1 ? page - 1 : page;
+    loadEntries(target);
   }
 
   // Non-admins get a clean message instead of a broken, 403-ing admin UI.
@@ -123,7 +139,7 @@ export default function AdminPage() {
 
   if (access === "checking") {
     return (
-      <main className="bg-app grain relative flex min-h-screen items-center justify-center text-gray-500">
+      <main className="bg-app grain relative flex min-h-screen items-center justify-center text-gray-400">
         <div className="bg-mesh pointer-events-none absolute inset-0" />
         <p className="relative z-10 text-sm font-light">Loading…</p>
       </main>
@@ -142,7 +158,7 @@ export default function AdminPage() {
           Add and manage the principles IronMind answers from.
         </p>
         {userEmail && (
-          <p className="mt-2 text-center text-xs font-light text-gray-600">
+          <p className="mt-2 text-center text-xs font-light text-gray-400">
             Logged in as {userEmail}
           </p>
         )}
@@ -163,30 +179,61 @@ export default function AdminPage() {
         </div>
 
         {/* entries */}
-        <div className="mt-10 flex flex-col gap-4">
-          {loadingEntries ? (
-            <>
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="glass-card animate-pulse p-5">
-                  <div className="h-5 w-1/3 rounded bg-white/10" />
-                  <div className="mt-2 h-4 w-20 rounded-full bg-white/5" />
-                  <div className="mt-4 h-3 w-full rounded bg-white/5" />
-                  <div className="mt-2 h-3 w-4/5 rounded bg-white/5" />
-                </div>
-              ))}
-            </>
-          ) : entries.length === 0 ? (
-            <p className="text-center text-sm font-light text-gray-500">
-              No entries yet. Add your first principle above.
+        <div className="mt-10">
+          {!loadingEntries && total > 0 && (
+            <p className="mb-4 text-sm font-light text-gray-400">
+              {total} {total === 1 ? "entry" : "entries"} total
             </p>
-          ) : (
-            entries.map((entry) => (
-              <KnowledgeCard
-                entry={entry}
-                handleDelete={handleDelete}
-                key={entry.id}
-              />
-            ))
+          )}
+
+          <div className="flex flex-col gap-4">
+            {loadingEntries ? (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="glass-card animate-pulse p-5">
+                    <div className="h-5 w-1/3 rounded bg-white/10" />
+                    <div className="mt-2 h-4 w-20 rounded-full bg-white/5" />
+                    <div className="mt-4 h-3 w-full rounded bg-white/5" />
+                    <div className="mt-2 h-3 w-4/5 rounded bg-white/5" />
+                  </div>
+                ))}
+              </>
+            ) : entries.length === 0 ? (
+              <p className="text-center text-sm font-light text-gray-400">
+                No entries yet. Add your first principle above.
+              </p>
+            ) : (
+              entries.map((entry) => (
+                <KnowledgeCard
+                  entry={entry}
+                  handleDelete={handleDelete}
+                  key={entry.id}
+                />
+              ))
+            )}
+          </div>
+
+          {/* pagination controls */}
+          {!loadingEntries && totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-between">
+              <button
+                onClick={() => loadEntries(page - 1)}
+                disabled={page <= 1}
+                className="glass-card px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="text-sm font-light text-gray-400">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => loadEntries(page + 1)}
+                disabled={page >= totalPages}
+                className="glass-card px-4 py-2 text-sm font-medium text-gray-200 transition-colors hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           )}
         </div>
       </div>
