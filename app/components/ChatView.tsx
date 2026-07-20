@@ -267,6 +267,11 @@ export default function ChatView({
       sessionIdRef.current = id;
       // Reflect the new session in the URL without a full navigation/remount.
       window.history.replaceState(null, "", `/chat/${id}`);
+      // Surface the new conversation in the sidebar IMMEDIATELY (the session +
+      // user message are already persisted server-side before the response is
+      // sent). Waiting until the stream finishes made history look missing for
+      // the whole (slow) generation window, and refreshing mid-stream lost it.
+      onSessionUpdated?.(id);
     }
   }
 
