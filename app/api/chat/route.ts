@@ -13,7 +13,7 @@ import {
   MAX_QUESTION_LENGTH,
   SYSTEM_PROMPT,
 } from "@/app/lib/constants";
-import { logError, newRequestId } from "@/app/lib/logger";
+import { logError, logInfo, newRequestId } from "@/app/lib/logger";
 
 // Allow enough headroom for the streamed generation to complete.
 export const maxDuration = 30;
@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
     });
     sessionId = s.id;
     if (!s.skipUserInsert) await insertUserMessage(sessionId, question);
+    logInfo("POST /api/chat", "session persisted", requestId, {
+      sessionId,
+      visitor: visitorId.slice(0, 8),
+    });
   } catch (err) {
     logError("POST /api/chat (persist user)", err, requestId);
     return NextResponse.json(
