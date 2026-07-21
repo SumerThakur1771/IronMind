@@ -2,13 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getRelevantKnowledge } from "@/app/lib/rag";
 import { generateResponse, streamResponse } from "@/app/lib/ai";
 import { getAuth } from "@/app/lib/auth";
-import {
-  getVisitorId,
-  newVisitorId,
-  VISITOR_COOKIE,
-  visitorCookieOptions,
-  serializeVisitorCookie,
-} from "@/app/lib/visitor";
+import { getVisitorId, newVisitorId } from "@/app/lib/visitor";
 import {
   resolveSession,
   insertUserMessage,
@@ -46,10 +40,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // --- Identity: anonymous visitor cookie (+ optional logged-in user).
-  const existingVisitor = getVisitorId(request);
-  const visitorId = existingVisitor ?? newVisitorId();
-  const isNewVisitor = !existingVisitor;
+  // --- Identity: the visitor cookie is guaranteed by middleware (and forwarded
+  // onto this request). The fallback is purely defensive.
+  const visitorId = getVisitorId(request) ?? newVisitorId();
   const userId = getAuth(request)?.userId ?? null;
 
   // --- Persist the session + user message up front (retry-deduped).
@@ -71,12 +64,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Attach session id (+ visitor cookie) to a JSON response.
+  // Attach the session id to a JSON response (the visitor cookie is set by
+  // middleware).
   function withMeta(res: NextResponse): NextResponse {
     res.headers.set("X-Chat-Session", sessionId);
-    if (isNewVisitor) {
-      res.cookies.set(VISITOR_COOKIE, visitorId, visitorCookieOptions());
-    }
     return res;
   }
 
@@ -184,9 +175,6 @@ export async function POST(request: NextRequest) {
       "X-Chat-Sources": encodeURIComponent(JSON.stringify(sources)),
       "X-Chat-Session": sessionId,
     });
-    if (isNewVisitor) {
-      headers.append("Set-Cookie", serializeVisitorCookie(visitorId));
-    }
     return new Response(stream, { headers });
   } catch (err) {
     logError("POST /api/chat (stream connect)", err, requestId);
