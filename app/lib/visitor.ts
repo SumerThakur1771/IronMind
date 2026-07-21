@@ -1,20 +1,35 @@
-import { randomUUID } from "crypto";
 import type { NextRequest } from "next/server";
 
 // Anonymous per-browser identity used to own chat sessions without login.
 // HttpOnly so client JS can't read/forge it; the server always derives the
 // owner from this cookie (never trusts a client-supplied id).
+//
+// The cookie is set in middleware (a normal, non-streamed response) rather than
+// on the streamed POST /api/chat response, because Vercel's proxy does not
+// reliably forward Set-Cookie on a streaming response.
 export const VISITOR_COOKIE = "visitor_id";
+export const VISITOR_HEADER = "x-visitor-id";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
-/** The existing visitor id from the request cookie, or null. */
+// A visitor id must look like a UUID (client-generated). This both validates
+// the client-provided header and prevents junk/oversized values.
+const VISITOR_ID_RE = /^[0-9a-f-]{16,64}$/i;
+
+/**
+ * The visitor id for this request. Prefers the client-provided `X-Visitor-Id`
+ * header (from localStorage) — reliable on Vercel — and falls back to the
+ * cookie for older clients.
+ */
 export function getVisitorId(request: NextRequest): string | null {
+  const header = request.headers.get(VISITOR_HEADER);
+  if (header && VISITOR_ID_RE.test(header)) return header;
   return request.cookies.get(VISITOR_COOKIE)?.value ?? null;
 }
 
-/** A fresh visitor id. */
+/** A fresh visitor id. Uses the global Web Crypto API so it works in both the
+ *  Node.js runtime (route handlers) and the Edge runtime (middleware). */
 export function newVisitorId(): string {
-  return randomUUID();
+  return crypto.randomUUID();
 }
 
 /** Cookie attributes for setting the visitor id on a response. */
@@ -26,13 +41,4 @@ export function visitorCookieOptions() {
     path: "/",
     maxAge: ONE_YEAR,
   };
-}
-
-/** Serialize a Set-Cookie header value (for raw `Response`, which has no
- *  cookies API like NextResponse). */
-export function serializeVisitorCookie(visitorId: string): string {
-  const o = visitorCookieOptions();
-  let s = `${VISITOR_COOKIE}=${visitorId}; Path=${o.path}; Max-Age=${o.maxAge}; SameSite=Lax; HttpOnly`;
-  if (o.secure) s += "; Secure";
-  return s;
 }

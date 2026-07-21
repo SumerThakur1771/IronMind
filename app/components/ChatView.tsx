@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { visitorHeaders } from "@/app/lib/client-visitor";
 
 type Source = {
   knowledgeId: number;
@@ -212,7 +213,9 @@ export default function ChatView({
     let active = true;
     (async () => {
       try {
-        const res = await fetch(`/api/chat/sessions/${sessionId}`);
+        const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+          headers: visitorHeaders(),
+        });
         if (!active) return;
         if (res.ok) {
           const data = await res.json();
@@ -285,7 +288,7 @@ export default function ChatView({
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...visitorHeaders() },
         body: JSON.stringify({ question, sessionId: sessionIdRef.current }),
         signal: controller.signal,
       });

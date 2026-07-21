@@ -2,13 +2,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { getRelevantKnowledge } from "@/app/lib/rag";
 import { generateResponse, streamResponse } from "@/app/lib/ai";
 import { getAuth } from "@/app/lib/auth";
-import {
-  getVisitorId,
-  newVisitorId,
-  VISITOR_COOKIE,
-  visitorCookieOptions,
-  serializeVisitorCookie,
-} from "@/app/lib/visitor";
+import { getVisitorId, newVisitorId } from "@/app/lib/visitor";
 import {
   resolveSession,
   insertUserMessage,
@@ -19,7 +13,7 @@ import {
   MAX_QUESTION_LENGTH,
   SYSTEM_PROMPT,
 } from "@/app/lib/constants";
-import { logError, newRequestId } from "@/app/lib/logger";
+import { logError, logInfo, newRequestId } from "@/app/lib/logger";
 
 // Allow enough headroom for the streamed generation to complete.
 export const maxDuration = 30;
@@ -46,10 +40,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // --- Identity: anonymous visitor cookie (+ optional logged-in user).
-  const existingVisitor = getVisitorId(request);
-  const visitorId = existingVisitor ?? newVisitorId();
-  const isNewVisitor = !existingVisitor;
+  // --- Identity: the visitor cookie is guaranteed by middleware (and forwarded
+  // onto this request). The fallback is purely defensive.
+  const visitorId = getVisitorId(request) ?? newVisitorId();
   const userId = getAuth(request)?.userId ?? null;
 
   // --- Persist the session + user message up front (retry-deduped).
@@ -63,6 +56,10 @@ export async function POST(request: NextRequest) {
     });
     sessionId = s.id;
     if (!s.skipUserInsert) await insertUserMessage(sessionId, question);
+    logInfo("POST /api/chat", "session persisted", requestId, {
+      sessionId,
+      visitor: visitorId.slice(0, 8),
+    });
   } catch (err) {
     logError("POST /api/chat (persist user)", err, requestId);
     return NextResponse.json(
@@ -71,12 +68,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Attach session id (+ visitor cookie) to a JSON response.
+  // Attach the session id to a JSON response (the visitor cookie is set by
+  // middleware).
   function withMeta(res: NextResponse): NextResponse {
     res.headers.set("X-Chat-Session", sessionId);
-    if (isNewVisitor) {
-      res.cookies.set(VISITOR_COOKIE, visitorId, visitorCookieOptions());
-    }
     return res;
   }
 
@@ -163,18 +158,26 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(token));
           }
         } catch (err) {
+          // Mid-stream failure: keep whatever partial text was sent.
           logError("POST /api/chat (stream)", err, requestId);
-        } finally {
-          controller.close();
-          // Persist the assistant answer even if the client disconnected.
-          if (acc) {
-            try {
-              await saveAssistantMessage(sessionId, acc, sources);
-            } catch (err) {
-              logError("POST /api/chat (persist assistant)", err, requestId);
-            }
+        }
+
+        // Persist the assistant answer BEFORE closing the stream. On Vercel the
+        // serverless function can be frozen the instant the stream closes, so a
+        // save in a post-close `finally` never runs (this is why production had
+        // user messages but no assistant messages). Awaiting the write here —
+        // while the stream is still open — keeps the function alive until it
+        // completes. The client already received every token, so the tiny delay
+        // before the stream's "done" is imperceptible.
+        if (acc) {
+          try {
+            await saveAssistantMessage(sessionId, acc, sources);
+          } catch (err) {
+            logError("POST /api/chat (persist assistant)", err, requestId);
           }
         }
+
+        controller.close();
       },
     });
 
@@ -184,9 +187,6 @@ export async function POST(request: NextRequest) {
       "X-Chat-Sources": encodeURIComponent(JSON.stringify(sources)),
       "X-Chat-Session": sessionId,
     });
-    if (isNewVisitor) {
-      headers.append("Set-Cookie", serializeVisitorCookie(visitorId));
-    }
     return new Response(stream, { headers });
   } catch (err) {
     logError("POST /api/chat (stream connect)", err, requestId);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { visitorHeaders } from "@/app/lib/client-visitor";
 import { motion, AnimatePresence } from "framer-motion";
 import ChatView from "./ChatView";
 import ChatSidebar, { type SessionMeta } from "./ChatSidebar";
@@ -35,7 +36,9 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
 
   const loadSessions = useCallback(async () => {
     try {
-      const res = await fetch("/api/chat/sessions");
+      const res = await fetch("/api/chat/sessions", {
+        headers: visitorHeaders(),
+      });
       if (res.ok) setSessions(await res.json());
     } catch {
       // ignore
@@ -53,7 +56,10 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
   async function handleDelete(id: string) {
     setSessions((prev) => prev.filter((s) => s.id !== id));
     try {
-      await fetch(`/api/chat/sessions/${id}`, { method: "DELETE" });
+      await fetch(`/api/chat/sessions/${id}`, {
+        method: "DELETE",
+        headers: visitorHeaders(),
+      });
     } catch {
       // ignore
     }

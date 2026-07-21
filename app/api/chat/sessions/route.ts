@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import prisma from "@/app/lib/prisma";
 import { getVisitorId } from "@/app/lib/visitor";
-import { logError, newRequestId } from "@/app/lib/logger";
+import { logError, logInfo, newRequestId } from "@/app/lib/logger";
 
 // List the current visitor's chat sessions (newest first).
 export async function GET(request: NextRequest) {
@@ -14,6 +14,10 @@ export async function GET(request: NextRequest) {
       where: { visitorId },
       orderBy: { updatedAt: "desc" },
       select: { id: true, title: true, updatedAt: true },
+    });
+    logInfo("GET /api/chat/sessions", "listed", requestId, {
+      visitor: visitorId.slice(0, 8),
+      count: sessions.length,
     });
     return NextResponse.json(sessions);
   } catch (err) {
