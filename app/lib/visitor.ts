@@ -8,10 +8,21 @@ import type { NextRequest } from "next/server";
 // on the streamed POST /api/chat response, because Vercel's proxy does not
 // reliably forward Set-Cookie on a streaming response.
 export const VISITOR_COOKIE = "visitor_id";
+export const VISITOR_HEADER = "x-visitor-id";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
-/** The existing visitor id from the request cookie, or null. */
+// A visitor id must look like a UUID (client-generated). This both validates
+// the client-provided header and prevents junk/oversized values.
+const VISITOR_ID_RE = /^[0-9a-f-]{16,64}$/i;
+
+/**
+ * The visitor id for this request. Prefers the client-provided `X-Visitor-Id`
+ * header (from localStorage) — reliable on Vercel — and falls back to the
+ * cookie for older clients.
+ */
 export function getVisitorId(request: NextRequest): string | null {
+  const header = request.headers.get(VISITOR_HEADER);
+  if (header && VISITOR_ID_RE.test(header)) return header;
   return request.cookies.get(VISITOR_COOKIE)?.value ?? null;
 }
 
