@@ -26,18 +26,31 @@ export default function ChatSidebar({
   activeId,
   onDelete,
   onNavigate,
+  onNewChat,
 }: {
   sessions: SessionMeta[];
   activeId?: string;
   onDelete: (id: string) => void;
   onNavigate?: () => void;
+  onNewChat?: () => void;
 }) {
   return (
     <div className="flex h-full w-full flex-col">
       <div className="p-3">
         <Link
           href="/chat"
-          onClick={onNavigate}
+          onClick={(e) => {
+            // Reset to a fresh chat without a full navigation. On the /chat page
+            // the URL may have been changed to /chat/[id] via replaceState during
+            // the first message, which desyncs the Next router and makes a plain
+            // <Link href="/chat"> a no-op — so drive the reset from onNewChat.
+            if (onNewChat) {
+              e.preventDefault();
+              onNewChat();
+            } else {
+              onNavigate?.();
+            }
+          }}
           className="flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-400 px-4 py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:shadow-blue-500/25"
         >
           <svg
