@@ -158,18 +158,26 @@ export async function POST(request: NextRequest) {
             controller.enqueue(encoder.encode(token));
           }
         } catch (err) {
+          // Mid-stream failure: keep whatever partial text was sent.
           logError("POST /api/chat (stream)", err, requestId);
-        } finally {
-          controller.close();
-          // Persist the assistant answer even if the client disconnected.
-          if (acc) {
-            try {
-              await saveAssistantMessage(sessionId, acc, sources);
-            } catch (err) {
-              logError("POST /api/chat (persist assistant)", err, requestId);
-            }
+        }
+
+        // Persist the assistant answer BEFORE closing the stream. On Vercel the
+        // serverless function can be frozen the instant the stream closes, so a
+        // save in a post-close `finally` never runs (this is why production had
+        // user messages but no assistant messages). Awaiting the write here —
+        // while the stream is still open — keeps the function alive until it
+        // completes. The client already received every token, so the tiny delay
+        // before the stream's "done" is imperceptible.
+        if (acc) {
+          try {
+            await saveAssistantMessage(sessionId, acc, sources);
+          } catch (err) {
+            logError("POST /api/chat (persist assistant)", err, requestId);
           }
         }
+
+        controller.close();
       },
     });
 
