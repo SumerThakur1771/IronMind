@@ -32,6 +32,9 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
   const [activeId, setActiveId] = useState<string | undefined>(sessionId);
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Bumped to force a fresh ChatView when starting a new chat from the /chat
+  // page (see handleNewChat).
+  const [resetNonce, setResetNonce] = useState(0);
   const router = useRouter();
 
   const loadSessions = useCallback(async () => {
@@ -71,6 +74,22 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
     loadSessions();
   }
 
+  // Start a new chat. On a real /chat/[id] route the router is in sync, so a
+  // normal navigation works. On the /chat page, the URL was changed to
+  // /chat/[id] via history.replaceState during the first message — which does
+  // NOT update the Next router — so router.push("/chat") would be a no-op.
+  // In that case reset the view client-side and restore the URL (no reload).
+  function handleNewChat() {
+    setDrawerOpen(false);
+    if (sessionId) {
+      router.push("/chat");
+      return;
+    }
+    window.history.replaceState(null, "", "/chat");
+    setActiveId(undefined);
+    setResetNonce((n) => n + 1);
+  }
+
   const gradientEdge = (
     <div className="absolute right-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-blue-500/40 to-transparent" />
   );
@@ -95,6 +114,7 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
             sessions={sessions}
             activeId={activeId}
             onDelete={handleDelete}
+            onNewChat={handleNewChat}
           />
         </div>
         {gradientEdge}
@@ -125,6 +145,7 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
                   activeId={activeId}
                   onDelete={handleDelete}
                   onNavigate={() => setDrawerOpen(false)}
+                  onNewChat={handleNewChat}
                 />
               </div>
               {gradientEdge}
@@ -156,7 +177,7 @@ export default function ChatShell({ sessionId }: { sessionId?: string }) {
         </button>
 
         <ChatView
-          key={sessionId ?? "new"}
+          key={sessionId ?? `new-${resetNonce}`}
           sessionId={sessionId}
           onSessionUpdated={handleSessionUpdated}
         />
