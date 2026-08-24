@@ -36,15 +36,23 @@ function openRouterKey(): string {
   return key;
 }
 
-// OpenRouter free models share an upstream rate-limit pool and throttle
-// intermittently (HTTP 429), so we try several in order and fall through on
-// transient failures rather than depending on any single model being up.
+// Free models (primary): zero cost. They share an upstream rate-limit pool and
+// throttle intermittently (HTTP 429), so we try several — across different
+// providers — in order and fall through on transient failures rather than
+// depending on any single one being up. All ids verified live on OpenRouter.
 const FREE_MODELS = [
   "google/gemma-4-26b-a4b-it:free",
-  "openai/gpt-oss-20b:free",
   "google/gemma-4-31b-it:free",
-  "nvidia/nemotron-nano-9b-v2:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
 ];
+
+// Paid fallback (last resort): a cheap, low-latency, reliable model used only
+// when every free model is throttled/unavailable, so credits are spent only when
+// they have to be. ~$0.10 / 1M input, ~$0.40 / 1M output.
+const PAID_FALLBACK = "google/gemini-2.5-flash-lite";
+
+// Full attempt order: all free models first, then the paid fallback.
+const MODEL_CHAIN = [...FREE_MODELS, PAID_FALLBACK];
 
 function buildContent(prompt: string, context: string): string {
   return `Use the following context to answer the question.\n\nContext:\n${context}\n\nQuestion:\n${prompt}`;
@@ -54,7 +62,7 @@ export async function generateResponse(prompt: string, context: string): Promise
   const content = buildContent(prompt, context);
 
   let lastError = "";
-  for (const model of FREE_MODELS) {
+  for (const model of MODEL_CHAIN) {
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {
@@ -89,7 +97,7 @@ export async function generateResponse(prompt: string, context: string): Promise
 /**
  * Streams the model's answer token-by-token as an async generator of text chunks.
  *
- * The FREE_MODELS fallback chain is used for *connection establishment* only —
+ * The MODEL_CHAIN fallback is used for *connection establishment* only —
  * a 429/5xx (or a 200 that streams nothing) falls through to the next model.
  * Once tokens are yielded we're committed to that model; a mid-stream failure
  * throws and cannot fall back (the caller has already sent partial text).
@@ -102,7 +110,7 @@ export async function* streamResponse(
   const content = buildContent(prompt, context);
 
   let lastError = "";
-  for (const model of FREE_MODELS) {
+  for (const model of MODEL_CHAIN) {
     const res = await fetch(OPENROUTER_URL, {
       method: "POST",
       headers: {
