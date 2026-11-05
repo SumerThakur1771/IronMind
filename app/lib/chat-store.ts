@@ -70,3 +70,17 @@ export async function saveAssistantMessage(
     }),
   ]);
 }
+
+/** The session's most recent messages, oldest first. */
+export async function getRecentMessages(
+  sessionId: string,
+  limit: number,
+): Promise<Array<{ role: string; content: string }>> {
+  const rows = await prisma.chatMessage.findMany({
+    where: { sessionId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: { role: true, content: true },
+  });
+  return rows.reverse();
+}

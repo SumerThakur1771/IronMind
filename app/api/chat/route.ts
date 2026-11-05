@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getRelevantKnowledge } from "@/app/lib/rag";
+import { getRelevantKnowledge, type RelevantKnowledge } from "@/app/lib/rag";
 import { generateResponse, streamResponse } from "@/app/lib/ai";
 import { getAuth } from "@/app/lib/auth";
 import { getVisitorId, newVisitorId } from "@/app/lib/visitor";
@@ -7,11 +7,16 @@ import {
   resolveSession,
   insertUserMessage,
   saveAssistantMessage,
+  getRecentMessages,
 } from "@/app/lib/chat-store";
+import { buildHistory, followUpQuery, type ChatTurn } from "@/app/lib/history";
 import {
   SIMILARITY_THRESHOLD,
   MAX_QUESTION_LENGTH,
   SYSTEM_PROMPT,
+  HISTORY_MAX_MESSAGES,
+  HISTORY_NOTE,
+  MAX_KNOWLEDGE_RESULTS,
 } from "@/app/lib/constants";
 import { logError, logInfo, newRequestId } from "@/app/lib/logger";
 
@@ -19,6 +24,26 @@ import { logError, logInfo, newRequestId } from "@/app/lib/logger";
 export const maxDuration = 30;
 
 const NO_VIEW_MESSAGE = "I don't have Sumer's view on this topic";
+
+// Run each search and merge the results: one entry per knowledge chunk, at its
+// best similarity, highest first. Fails only if every search fails.
+async function searchKnowledge(queries: string[]): Promise<RelevantKnowledge[]> {
+  const settled = await Promise.allSettled(queries.map(getRelevantKnowledge));
+  const ok = settled.filter((r) => r.status === "fulfilled");
+  if (ok.length === 0) throw (settled[0] as PromiseRejectedResult).reason;
+
+  const best = new Map<string, RelevantKnowledge>();
+  for (const { value } of ok) {
+    for (const k of value) {
+      const key = `${k.knowledge_id}:${k.chunk_text}`;
+      const seen = best.get(key);
+      if (!seen || k.similarity > seen.similarity) best.set(key, k);
+    }
+  }
+  return [...best.values()]
+    .sort((a, b) => b.similarity - a.similarity)
+    .slice(0, MAX_KNOWLEDGE_RESULTS);
+}
 
 export async function POST(request: NextRequest) {
   const requestId = newRequestId();
@@ -47,6 +72,8 @@ export async function POST(request: NextRequest) {
 
   // --- Persist the session + user message up front (retry-deduped).
   let sessionId: string;
+  let storedMessages: Promise<Array<{ role: string; content: string }>> =
+    Promise.resolve([]);
   try {
     const s = await resolveSession({
       visitorId,
@@ -55,6 +82,20 @@ export async function POST(request: NextRequest) {
       question,
     });
     sessionId = s.id;
+
+    // Earlier messages, for conversation memory. Only an existing session (one
+    // this visitor owns) has any. Loaded alongside the insert below; whether the
+    // current question is included doesn't matter, because buildHistory drops
+    // unanswered questions. A failure here just means no memory this time.
+    if (s.id === requestedSessionId) {
+      storedMessages = getRecentMessages(sessionId, HISTORY_MAX_MESSAGES * 2).catch(
+        (err) => {
+          logError("POST /api/chat (load history)", err, requestId);
+          return [];
+        },
+      );
+    }
+
     if (!s.skipUserInsert) await insertUserMessage(sessionId, question);
     logInfo("POST /api/chat", "session persisted", requestId, {
       sessionId,
@@ -75,7 +116,12 @@ export async function POST(request: NextRequest) {
     return res;
   }
 
+  const history: ChatTurn[] = buildHistory(await storedMessages);
+
   // --- RAG (buffered): embed → vector search → sources.
+  // With history, a second search adds the earlier questions, so a follow-up
+  // like "what about on rest days?" still finds the right topic. The question-
+  // only search still runs, so a change of topic isn't drowned out.
   let context: string;
   let prompt: string;
   let sources: Array<{
@@ -85,7 +131,10 @@ export async function POST(request: NextRequest) {
     similarity: number;
   }>;
   try {
-    const knowledge = await getRelevantKnowledge(question);
+    const followUp = followUpQuery(history, question);
+    const knowledge = await searchKnowledge(
+      followUp ? [question, followUp] : [question],
+    );
     const relevant = knowledge.filter(
       (k) => k.similarity >= SIMILARITY_THRESHOLD
     );
@@ -100,7 +149,8 @@ export async function POST(request: NextRequest) {
     context = relevant
       .map((k) => `Title: ${k.title}\nCategory: ${k.category}\n${k.chunk_text}`)
       .join("\n\n---\n\n");
-    prompt = `${SYSTEM_PROMPT}\n\nHere is the knowledge:\n${context}\n\nUser question: ${question}`;
+    const historyNote = history.length ? `\n\n${HISTORY_NOTE}` : "";
+    prompt = `${SYSTEM_PROMPT}${historyNote}\n\nHere is the knowledge:\n${context}\n\nUser question: ${question}`;
     sources = relevant.map((k) => ({
       knowledgeId: k.knowledge_id,
       title: k.title,
@@ -120,7 +170,7 @@ export async function POST(request: NextRequest) {
   // Buffered fallback used when streaming can't be established.
   async function buffered(): Promise<NextResponse> {
     try {
-      const answer = await generateResponse(prompt, context);
+      const answer = await generateResponse(prompt, context, history);
       await saveAssistantMessage(sessionId, answer, sources);
       return withMeta(NextResponse.json({ answer, sources }));
     } catch (err) {
@@ -137,7 +187,7 @@ export async function POST(request: NextRequest) {
   // --- Generation (streamed): plain-text token body + sources in a header.
   //     The full answer is accumulated and persisted when the stream closes.
   try {
-    const gen = streamResponse(prompt, context);
+    const gen = streamResponse(prompt, context, history);
     const first = await gen.next();
 
     if (first.done) {
