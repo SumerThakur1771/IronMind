@@ -1,3 +1,5 @@
+import type { ChatTurn } from "@/app/lib/history";
+
 const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 function apiKey(): string {
@@ -78,8 +80,19 @@ function buildContent(prompt: string, context: string): string {
   return `Use the following context to answer the question.\n\nContext:\n${context}\n\nQuestion:\n${prompt}`;
 }
 
-export async function generateResponse(prompt: string, context: string): Promise<string> {
-  const content = buildContent(prompt, context);
+// Earlier turns first (oldest → newest), then the current question. Everything
+// is sent as user/assistant turns (no "system" role), as before, because some
+// providers reject system messages for some models.
+function buildMessages(prompt: string, context: string, history: ChatTurn[]): ChatTurn[] {
+  return [...history, { role: "user", content: buildContent(prompt, context) }];
+}
+
+export async function generateResponse(
+  prompt: string,
+  context: string,
+  history: ChatTurn[] = [],
+): Promise<string> {
+  const messages = buildMessages(prompt, context, history);
 
   let lastError = "";
   for (const model of MODEL_CHAIN) {
@@ -94,7 +107,7 @@ export async function generateResponse(prompt: string, context: string): Promise
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content }],
+          messages,
         }),
         signal: AbortSignal.timeout(MODEL_TIMEOUT_MS),
       });
@@ -138,9 +151,10 @@ export async function generateResponse(prompt: string, context: string): Promise
 export async function* streamResponse(
   prompt: string,
   context: string,
+  history: ChatTurn[] = [],
   signal?: AbortSignal,
 ): AsyncGenerator<string> {
-  const content = buildContent(prompt, context);
+  const messages = buildMessages(prompt, context, history);
 
   let lastError = "";
   for (const model of MODEL_CHAIN) {
@@ -163,7 +177,7 @@ export async function* streamResponse(
           },
           body: JSON.stringify({
             model,
-            messages: [{ role: "user", content }],
+            messages,
             stream: true,
           }),
           signal: withCallerSignal(timeout.signal, signal),
