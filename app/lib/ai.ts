@@ -43,7 +43,7 @@ function openRouterKey(): string {
 const FREE_MODELS = [
   "google/gemma-4-26b-a4b-it:free",
   "google/gemma-4-31b-it:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
+  "nvidia/nemotron-3.5-lightning:free",
 ];
 
 // Paid fallback (last resort): a cheap, low-latency, reliable model used only
@@ -83,10 +83,11 @@ export async function generateResponse(prompt: string, context: string): Promise
       continue;
     }
 
-    // 429 (rate-limited) and 5xx (provider hiccup) are transient — try the
-    // next model. Other statuses (400/401/403) are fatal, so stop early.
+    // Only auth errors (401/403) are fatal — every model would fail the same
+    // way. Anything else (429, 5xx, or a 400/404 from a retired model) falls
+    // through to the next model in the chain.
     lastError = `${model} -> ${res.status}: ${await res.text()}`;
-    if (res.status !== 429 && res.status < 500) {
+    if (res.status === 401 || res.status === 403) {
       throw new Error(`Generation request failed (${lastError})`);
     }
   }
@@ -127,8 +128,8 @@ export async function* streamResponse(
 
     if (!res.ok || !res.body) {
       lastError = `${model} -> ${res.status}`;
-      // Transient (429/5xx) → try the next model. Fatal 4xx → stop.
-      if (res.status !== 429 && res.status < 500) {
+      // Auth errors (401/403) are fatal → stop. Anything else → next model.
+      if (res.status === 401 || res.status === 403) {
         throw new Error(`Streaming request failed (${lastError})`);
       }
       continue;
